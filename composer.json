@@ -1,0 +1,24 @@
+{
+  "name": "levmorozov/sphinxql",
+  "type": "library",
+  "description": "Mii SphinxQL component",
+  "keywords": [
+    "mii",
+    "sphinxql",
+    "sphinxsearch"
+  ],
+  "homepage": "https://github.com/levmorozov/sphinxql",
+  "license": "MIT",
+  "require": {
+    "php": ">=7.1",
+    "levmorozov/mii" : "dev-master"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "~5.4"
+  },
+  "autoload": {
+    "psr-4": {
+      "levmorozov\\sphinxql\\": "src/"
+    }
+  }
+}
