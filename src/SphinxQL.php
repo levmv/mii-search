@@ -2,7 +2,6 @@
 
 namespace levmorozov\sphinxql;
 
-use mii\db\Expression;
 
 class SphinxQL
 {
@@ -19,7 +18,6 @@ class SphinxQL
      * @param int
      * @param string $q
      * @param array $params
-     * @return Result
      */
     static function query($type, $q, array $params = [], $db = null) {
 

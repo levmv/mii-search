@@ -2,8 +2,6 @@
 
 namespace levmorozov\sphinxql;
 
-use mii\db\DatabaseException;
-use mii\db\Expression;
 
 /**
  * SphinxQL Query Builder
@@ -17,6 +15,8 @@ class Query
 
     // SQL statement
     protected $_sql;
+
+    protected $db;
 
 
     protected $_index;
@@ -71,10 +71,12 @@ class Query
      * @param   string $sql query string
      * @return  void
      */
-    public function __construct($sql = NULL, $type = NULL)
+    public function __construct(Database $db = null)
     {
-        $this->_type = $type;
-        $this->_sql = $sql;
+        $this->db = $db;
+        if($this->db === null) {
+            $this->db = \Mii::$app->sphinx;
+        }
     }
 
     /**
@@ -87,8 +89,8 @@ class Query
         try {
             // Return the SQL string
             return $this->compile();
-        } catch (DatabaseException $e) {
-            return DatabaseException::text($e);
+        } catch (\Throwable $e) {
+            return SphinxqlException::text($e);
         }
     }
 
@@ -120,7 +122,6 @@ class Query
             // Set the initial columns
             $this->_select = $columns;
         }
-
         return $this;
     }
 
@@ -596,7 +597,7 @@ class Query
     public function values(...$values)
     {
         if (!is_array($this->_values)) {
-            throw new DatabaseException('INSERT INTO ... SELECT statements cannot be combined with INSERT INTO ... VALUES');
+            throw new SphinxqlException('INSERT INTO ... SELECT statements cannot be combined with INSERT INTO ... VALUES');
         }
 
         $this->_values = array_merge($this->_values, $values);
@@ -629,7 +630,7 @@ class Query
     public function subselect(Query $query)
     {
         if ($query->type() !== Database::SELECT) {
-            throw new DatabaseException('Only SELECT queries can be combined with INSERT queries');
+            throw new SphinxqlException('Only SELECT queries can be combined with INSERT queries');
         }
 
         $this->_values = $query;
@@ -1005,19 +1006,27 @@ class Query
      * @param   mixed $db Database instance or name of instance
      * @return  string
      */
-    public function compile($db = NULL)
+    public function compile()
     {
-        if (!is_object($db)) {
-            // Get the database instance
-            $db = Database::instance($db);
+        // Compile the SQL query
+        switch ($this->_type) {
+            case Database::SELECT:
+                $sql = $this->compile_select();
+                break;
+            case Database::INSERT:
+                $sql = $this->compile_insert();
+                break;
+            case Database::UPDATE:
+                $sql = $this->compile_update();
+                break;
+            case Database::DELETE:
+                $sql = $this->compile_delete();
+                break;
         }
-
-        // Import the SQL locally
-        $sql = $this->_sql;
 
         if (!empty($this->_parameters)) {
             // Quote all of the values
-            $values = array_map([$db, 'quote'], $this->_parameters);
+            $values = array_map([$this->db, 'quote'], $this->_parameters);
 
             // Replace the values in the SQL
             $sql = strtr($sql, $values);

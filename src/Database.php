@@ -3,9 +3,6 @@
 namespace levmorozov\sphinxql;
 
 
-use mii\db\DatabaseException;
-use mii\db\Expression;
-
 class Database
 {
 
@@ -39,7 +36,6 @@ class Database
      * @var  string  the last query executed
      */
     public $last_query;
-
 
     /**
      * @var \mysqli Raw server connection
@@ -87,7 +83,6 @@ class Database
     /**
      * Connect to the sphinx. This is called automatically when the first query is executed.
      *
-     * @throws  DatabaseException
      * @return  void
      */
     public function connect() : void
@@ -97,18 +92,15 @@ class Database
 
         try {
             $this->_connection = new \mysqli($this->_config['host'], '', '', '', $this->_config['port'], '');
-        } catch (\Exception $e) {
-            // No connection exists
-            $this->_connection = NULL;
+        } catch (\Throwable $e) {
 
-            throw new DatabaseException(':error',
-                [':error' => $e->getMessage()],
-                $e->getCode());
+            $this->_connection = null;
+            throw new SphinxqlException($e->getMessage(), $e->getCode());
         }
     }
 
 
-    public function query(?int $type, string $sql, $as_object = false, array $params = NULL)  {
+    public function query(?int $type, string $sql) : ?array  {
         // Make sure the database is connected
         $this->_connection or $this->connect();
 
@@ -125,7 +117,7 @@ class Database
                 \mii\util\Profiler::delete($benchmark);
             }
 
-            throw new DatabaseException(':error [ :query ]', [
+            throw new SphinxqlException(':error [ :query ]', [
                 ':error' => $this->_connection->error,
                 ':query' => $sql
             ], $this->_connection->errno);
