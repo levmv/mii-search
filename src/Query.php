@@ -60,6 +60,8 @@ class Query
     // LIMIT ...
     protected $_limit;
 
+    protected $_facets;
+
     // Quoted query parameters
     protected $_parameters = [];
 
@@ -287,15 +289,10 @@ class Query
      * @param   mixed $db Database instance or name of instance
      * @return  string
      */
-    public function compile_select($db = NULL)
+    public function compile_select()
     {
-        if (!is_object($db)) {
-            // Get the database instance
-            $db = \Mii::$app->sphinx;
-        }
-
         // Callback to quote columns
-        $quote_column = [$db, 'quote_column'];
+        $quote_column = [$this->db, 'quote_column'];
 
         // Start a selection query
         $query = 'SELECT ';
@@ -310,10 +307,10 @@ class Query
             foreach ($this->_select as $column) {
                 if (is_array($column)) {
                     // Use the column alias
-                    $column = $db->quote_identifier($column);
+                    $column = $this->db->quote_identifier($column);
                 } else {
                     // Apply proper quoting to the column
-                    $column = $db->quote_column($column);
+                    $column = $this->db->quote_column($column);
                 }
 
                 $columns[] = $column;
@@ -324,7 +321,7 @@ class Query
         }
 
         if (!empty($this->_from)) {
-            $query .= ' FROM ' . implode(', ', array_unique(array_map([$db, 'quote_index'], $this->_from)));
+            $query .= ' FROM ' . implode(', ', array_unique(array_map([$this->db, 'quote_index'], $this->_from)));
         }
 
         if (!empty($this->_where) or !empty($this->_match)) {
@@ -332,25 +329,27 @@ class Query
             $query .= ' WHERE ';
 
             if(!empty($this->_match)) {
-                $query .= 'MATCH(' .$this->_compile_match($db, $this->_match).')';
-            }
+                $query .= 'MATCH(' .$this->_compile_match($this->db, $this->_match).')';
 
-            $query .= $this->_compile_conditions($db, $this->_where);
+                if(!empty($this->_where))
+                    $query .= ' AND ';
+            }
+            $query .= $this->_compile_conditions($this->db, $this->_where);
         }
 
         if (!empty($this->_group_by)) {
             // Add grouping
-            $query .= ' ' . $this->_compile_group_by($db, $this->_group_by);
+            $query .= ' ' . $this->_compile_group_by($this->db, $this->_group_by);
         }
 
         if (!empty($this->_having)) {
             // Add filtering conditions
-            $query .= ' HAVING ' . $this->_compile_conditions($db, $this->_having);
+            $query .= ' HAVING ' . $this->_compile_conditions($this->db, $this->_having);
         }
 
         if (!empty($this->_order_by)) {
             // Add sorting
-            $query .= ' ' . $this->_compile_order_by($db, $this->_order_by);
+            $query .= ' ' . $this->_compile_order_by($this->db, $this->_order_by);
         }
 
         if ($this->_limit !== NULL) {
@@ -370,6 +369,11 @@ class Query
         if($this->_option) {
 
             $query .= ' OPTION '.implode(', ', $this->_option);
+        }
+
+        if($this->_facets) {
+            foreach($this->_facets as $facet)
+                $query .= ' FACET '.$facet;
         }
 
         $this->_sql = $query;
@@ -557,6 +561,16 @@ class Query
         return $this;
     }
 
+
+    public function facet($query)
+    {
+        $this->_facets[] = $query;
+
+        $this->_type = Database::MULTI_SELECT;
+
+        return $this;
+    }
+
     /**** INSERT ****/
 
 
@@ -707,7 +721,7 @@ class Query
 
 
         // Add the columns to update
-        $query .= ' SET ' . $this->_compile_set($db, $this->_set);
+        $query .= ' SET ' . $this->_compile_set($this->_set);
 
 
         if (!empty($this->_where)) {
@@ -915,11 +929,10 @@ class Query
     /**
      * Compiles an array of set values into an SQL partial. Used for UPDATE.
      *
-     * @param   object $db Database instance
      * @param   array $values updated values
      * @return  string
      */
-    protected function _compile_set(Database $db, array $values)
+    protected function _compile_set(array $values)
     {
         $set = [];
         foreach ($values as $group) {
@@ -927,11 +940,11 @@ class Query
             list ($column, $value) = $group;
 
             // Quote the column name
-            $column = $db->quote_column($column);
+            $column = $this->db->quote_column($column);
 
             if ((is_string($value) AND array_key_exists($value, $this->_parameters)) === false) {
                 // Quote the value, it is not a parameter
-                $value = $db->quote($value);
+                $value = $this->db->quote($value);
             }
 
             $set[$column] = $column . ' = ' . $value;
@@ -1046,32 +1059,27 @@ class Query
      * @return  mixed    the insert id for INSERT queries
      * @return  integer  number of affected rows for all other queries
      */
-    public function execute(Database $db = NULL, $as_object = NULL, $object_params = NULL)
+    public function execute()
     {
-
-        if (!is_object($db)) {
-            // Get the database instance
-            $db = \Mii::$app->sphinx;
-        }
-
         // Compile the SQL query
         switch ($this->_type) {
             case Database::SELECT:
-                $sql = $this->compile_select($db);
+            case Database::MULTI_SELECT:
+                $sql = $this->compile_select();
                 break;
             case Database::INSERT:
-                $sql = $this->compile_insert($db);
+                $sql = $this->compile_insert();
                 break;
             case Database::UPDATE:
-                $sql = $this->compile_update($db);
+                $sql = $this->compile_update();
                 break;
             case Database::DELETE:
-                $sql = $this->compile_delete($db);
+                $sql = $this->compile_delete();
                 break;
         }
 
         // Execute the query
-        $result =  $db->query($this->_type, $sql);
+        $result =  $this->db->query($this->_type, $sql);
 
 
         return $result;

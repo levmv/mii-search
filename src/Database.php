@@ -14,6 +14,8 @@ class Database
 
     public const MULTI = 5;
 
+    public const MULTI_SELECT = 6;
+
     protected $escape_chars = array(
         '\\' => '\\\\',
         '(' => '\(',
@@ -95,7 +97,7 @@ class Database
         } catch (\Throwable $e) {
 
             $this->_connection = null;
-            throw new SphinxqlException($e->getMessage(), $e->getCode());
+            throw new SphinxqlException($e->getMessage(), [], $e->getCode());
         }
     }
 
@@ -111,7 +113,26 @@ class Database
         }
 
         // Execute the query
-        if (($result = $this->_connection->query($sql)) === false) {
+        if($type === Database::MULTI_SELECT) {
+
+            $this->_connection->multi_query($sql);
+            $results = [];
+            do {
+
+                if($result = $this->_connection->store_result()) {
+                    $results[] = $result->fetch_all(MYSQLI_ASSOC);
+                    $result->free_result();
+                }
+
+            } while ($this->_connection->more_results() && $this->_connection->next_result());
+
+
+            return $results;
+        } else {
+            $result = $this->_connection->query($sql);
+        }
+
+        if ( $result === false || $this->_connection->errno ) {
             if ($benchmark) {
                 // This benchmark is worthless
                 \mii\util\Profiler::delete($benchmark);
@@ -131,6 +152,7 @@ class Database
         $this->last_query = $sql;
 
         if ($type === Database::SELECT) {
+
             return $result->fetch_all(MYSQLI_ASSOC);
         }
         return null;
