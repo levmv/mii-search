@@ -3,4 +3,4 @@
 namespace levmorozov\sphinxql;
 
 
-class SphinxqlException extends \mii\core\Exception {}
+class SphinxqlException extends \mii\db\DatabaseException {}

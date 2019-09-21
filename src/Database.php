@@ -74,7 +74,7 @@ class Database
                     $this->_connection = NULL;
                 }
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // Database is probably not disconnected
             $status = !is_resource($this->_connection);
         }
@@ -95,9 +95,8 @@ class Database
         try {
             $this->_connection = new \mysqli($this->_config['host'], '', '', '', $this->_config['port'], '');
         } catch (\Throwable $e) {
-
             $this->_connection = null;
-            throw new SphinxqlException($e->getMessage(), [], $e->getCode());
+            throw new SphinxqlException($e->getMessage(), $e->getCode(), $e);
         }
     }
 
@@ -138,10 +137,7 @@ class Database
                 \mii\util\Profiler::delete($benchmark);
             }
 
-            throw new SphinxqlException(':error [ :query ]', [
-                ':error' => $this->_connection->error,
-                ':query' => $sql
-            ], $this->_connection->errno);
+            throw new SphinxqlException($this->_connection->error. " [ $sql ]", $this->_connection->errno);
         }
 
         if ($benchmark) {
@@ -202,9 +198,7 @@ class Database
 
 
         if (($string = $this->_connection->real_escape_string((string)$string)) === false) {
-            throw new DatabaseException(':error', [
-                ':error' => $this->_connection->error,
-            ], $this->_connection->errno);
+            throw new SphinxqlException($this->_connection->error, $this->_connection->errno);
         }
 
         return $string;
@@ -273,9 +267,7 @@ class Database
         $this->_connection or $this->connect();
 
         if (($value = $this->_connection->real_escape_string((string)$value)) === false) {
-            throw new DatabaseException(':error', [
-                ':error' => $this->_connection->error,
-            ], $this->_connection->errno);
+            throw new SphinxqlException($this->_connection->error, $this->_connection->errno);
         }
 
         // SQL standard is to use single-quotes for all values
@@ -309,9 +301,7 @@ class Database
         $this->_connection or $this->connect();
 
         if ($mode AND !$this->_connection->query("SET TRANSACTION ISOLATION LEVEL $mode")) {
-            throw new DatabaseException(':error', [
-                ':error' => $this->_connection->error
-            ], $this->_connection->errno);
+            throw new SphinxqlException($this->_connection->error, $this->_connection->errno);
         }
 
         return (bool)$this->_connection->query('START TRANSACTION');

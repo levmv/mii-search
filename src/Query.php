@@ -3,6 +3,8 @@
 namespace levmorozov\sphinxql;
 
 
+use mii\core\ErrorHandler;
+
 /**
  * SphinxQL Query Builder
  *
@@ -92,7 +94,7 @@ class Query
             // Return the SQL string
             return $this->compile();
         } catch (\Throwable $e) {
-            return SphinxqlException::text($e);
+            return ErrorHandler::convert_to_error($e);
         }
     }
 
