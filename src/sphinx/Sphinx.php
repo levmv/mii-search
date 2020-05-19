@@ -1,20 +1,25 @@
-<?php
+<?php declare(strict_types=1);
 
-namespace levmorozov\sphinxql;
+namespace levmorozov\mii_search\sphinx;
+
+use mii\core\Component;
 
 
-class Database
+class Sphinx extends Component
 {
 
     // Query types
-    public const SELECT = 1;
-    public const INSERT = 2;
-    public const UPDATE = 3;
-    public const DELETE = 4;
+    public const SELECT  = 1;
+    public const INSERT  = 2;
+    public const REPLACE = 3;
+    public const UPDATE  = 4;
+    public const DELETE  = 5;
 
-    public const MULTI = 5;
+    public const MULTI = 6;
+    public const MULTI_SELECT = 7;
 
-    public const MULTI_SELECT = 6;
+    protected string $hostname = '127.0.0.1';
+    protected int $port = 9306;
 
     protected $escape_chars = array(
         '\\' => '\\\\',
@@ -44,17 +49,6 @@ class Database
      */
     protected $_connection;
 
-    /**
-     * @var array configuration array
-     */
-    protected $_config;
-
-
-    public function __construct(array $config)
-    {
-        // Store the config locally
-        $this->_config = $config;
-    }
 
     public function __destruct()
     {
@@ -86,6 +80,7 @@ class Database
      * Connect to the sphinx. This is called automatically when the first query is executed.
      *
      * @return  void
+     * @throws SphinxqlException
      */
     public function connect() : void
     {
@@ -93,11 +88,13 @@ class Database
             return;
 
         try {
-            $this->_connection = new \mysqli($this->_config['host'], '', '', '', $this->_config['port'], '');
+            $this->_connection = new \mysqli($this->hostname, '', '', '', $this->port, '');
         } catch (\Throwable $e) {
             $this->_connection = null;
             throw new SphinxqlException($e->getMessage(), $e->getCode(), $e);
         }
+
+        $this->_connection->options(\MYSQLI_OPT_INT_AND_FLOAT_NATIVE, 1);
     }
 
 
@@ -112,7 +109,7 @@ class Database
         }
 
         // Execute the query
-        if($type === Database::MULTI_SELECT) {
+        if($type === Sphinx::MULTI_SELECT) {
 
             $this->_connection->multi_query($sql);
             $results = [];
@@ -147,7 +144,7 @@ class Database
         // Set the last query
         $this->last_query = $sql;
 
-        if ($type === Database::SELECT) {
+        if ($type === Sphinx::SELECT) {
 
             return $result->fetch_all(MYSQLI_ASSOC);
         }
@@ -219,7 +216,7 @@ class Database
      *
      * @param   mixed $value any value to quote
      * @return  string
-     * @uses    Database::escape
+     * @uses    Sphinx::escape
      */
     public function quote($value) : string
     {
@@ -230,7 +227,7 @@ class Database
         } elseif ($value === false) {
             return "'0'";
         } elseif (is_int($value)) {
-            return (int)$value;
+            return (string)((int)$value);
         } elseif (is_float($value)) {
             // Convert to non-locale aware float to prevent possible commas
             return sprintf('%F', $value);
@@ -355,8 +352,8 @@ class Database
      *
      * @param   mixed $column column name or array(column, alias)
      * @return  string
-     * @uses    Database::quote_identifier
-     * @uses    Database::table_prefix
+     * @uses    Sphinx::quote_identifier
+     * @uses    Sphinx::table_prefix
      */
     public function quote_column($column) : string
     {

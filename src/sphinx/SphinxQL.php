@@ -1,6 +1,6 @@
 <?php
 
-namespace levmorozov\sphinxql;
+namespace levmorozov\mii_search\sphinx;
 
 
 class SphinxQL
@@ -11,7 +11,7 @@ class SphinxQL
      * @return Result
      */
     static function select($q, array $params = []) {
-        return static::query(Database::SELECT, $q, $params);
+        return static::query(Sphinx::SELECT, $q, $params);
     }
 
     /**
@@ -42,7 +42,7 @@ class SphinxQL
      * @return array
      */
     static function update($q, array $params = []) {
-        return static::query(Database::UPDATE, $q, $params);
+        return static::query(Sphinx::UPDATE, $q, $params);
     }
 
     /**
@@ -50,7 +50,7 @@ class SphinxQL
      * @return int
      */
     static function insert($q, array $params = []) {
-        return static::query(Database::INSERT, $q, $params);
+        return static::query(Sphinx::INSERT, $q, $params);
     }
 
     /**
@@ -58,7 +58,7 @@ class SphinxQL
      * @return int
      */
     static function delete($q, array $params = []) {
-        return static::query(Database::DELETE, $q, $params);
+        return static::query(Sphinx::DELETE, $q, $params);
     }
 
     /**
@@ -79,7 +79,7 @@ class SphinxQL
             $sql .= ' LIKE '.$like;
         }
 
-        $db_result =  static::query(Database::SELECT, $sql);
+        $db_result =  static::query(Sphinx::SELECT, $sql);
 
         $result = [];
         foreach($db_result as $value) {

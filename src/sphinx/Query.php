@@ -1,6 +1,6 @@
 <?php
 
-namespace levmorozov\sphinxql;
+namespace levmorozov\mii_search\sphinx;
 
 
 use mii\core\ErrorHandler;
@@ -19,7 +19,6 @@ class Query
     protected $_sql;
 
     protected $db;
-
 
     protected $_index;
 
@@ -71,14 +70,14 @@ class Query
     /**
      * Creates a new SQL query of the specified type.
      *
-     * @param   integer $type query type: Database::SELECT, Database::INSERT, etc
-     * @param   string $sql query string
+     * @param integer $type query type: Database::SELECT, Database::INSERT, etc
+     * @param string  $sql query string
      * @return  void
      */
-    public function __construct(Database $db = null)
+    public function __construct(Sphinx $db = null)
     {
         $this->db = $db;
-        if($this->db === null) {
+        if ($this->db === null) {
             $this->db = \Mii::$app->sphinx;
         }
     }
@@ -115,12 +114,12 @@ class Query
     /**
      * Sets the initial columns to select
      *
-     * @param   array $columns column list
+     * @param array $columns column list
      * @return  Query
      */
     public function select(array $columns = NULL)
     {
-        $this->_type = Database::SELECT;
+        $this->_type = Sphinx::SELECT;
 
         if (!empty($columns)) {
             // Set the initial columns
@@ -132,7 +131,7 @@ class Query
     /**
      * Choose the indexes to select "FROM ..."
      *
-     * @param   mixed $indexes index name or array($index, $alias) or object
+     * @param mixed $indexes index name or array($index, $alias) or object
      * @return  $this
      */
     public function from($indexes)
@@ -148,7 +147,7 @@ class Query
     /**
      * Creates a "GROUP BY ..." filter.
      *
-     * @param   mixed $columns column name or array($column, $alias) or object
+     * @param mixed $columns column name or array($column, $alias) or object
      * @return  $this
      */
     public function group_by($columns)
@@ -163,9 +162,9 @@ class Query
     /**
      * Alias of and_having()
      *
-     * @param   mixed $column column name or array($column, $alias) or object
-     * @param   string $op logic operator
-     * @param   mixed $value column value
+     * @param mixed  $column column name or array($column, $alias) or object
+     * @param string $op logic operator
+     * @param mixed  $value column value
      * @return  $this
      */
     public function having($column, $op, $value = NULL)
@@ -176,9 +175,9 @@ class Query
     /**
      * Creates a new "AND HAVING" condition for the query.
      *
-     * @param   mixed $column column name or array($column, $alias) or object
-     * @param   string $op logic operator
-     * @param   mixed $value column value
+     * @param mixed  $column column name or array($column, $alias) or object
+     * @param string $op logic operator
+     * @param mixed  $value column value
      * @return  $this
      */
     public function and_having($column, $op, $value = NULL)
@@ -191,9 +190,9 @@ class Query
     /**
      * Creates a new "OR HAVING" condition for the query.
      *
-     * @param   mixed $column column name or array($column, $alias) or object
-     * @param   string $op logic operator
-     * @param   mixed $value column value
+     * @param mixed  $column column name or array($column, $alias) or object
+     * @param string $op logic operator
+     * @param mixed  $value column value
      * @return  $this
      */
     public function or_having($column, $op, $value = NULL)
@@ -275,7 +274,7 @@ class Query
     /**
      * Start returning results after "OFFSET ..."
      *
-     * @param   integer $number starting result number or NULL to reset
+     * @param integer $number starting result number or NULL to reset
      * @return  $this
      */
     public function offset($number)
@@ -288,7 +287,7 @@ class Query
     /**
      * Compile the SQL query and return it.
      *
-     * @param   mixed $db Database instance or name of instance
+     * @param mixed $db Database instance or name of instance
      * @return  string
      */
     public function compile_select()
@@ -330,10 +329,10 @@ class Query
             // Add selection conditions
             $query .= ' WHERE ';
 
-            if(!empty($this->_match)) {
-                $query .= 'MATCH(' .$this->_compile_match($this->db, $this->_match).')';
+            if (!empty($this->_match)) {
+                $query .= 'MATCH(' . $this->_compile_match($this->db, $this->_match) . ')';
 
-                if(!empty($this->_where))
+                if (!empty($this->_where))
                     $query .= ' AND ';
             }
             $query .= $this->_compile_conditions($this->db, $this->_where);
@@ -359,23 +358,22 @@ class Query
             $query .= ' LIMIT ';
             if ($this->_offset !== NULL) {
                 // Add offsets
-                $query .= $this->_offset.', ';
+                $query .= $this->_offset . ', ';
             }
 
             // Add limiting
-            $query .=  $this->_limit;
+            $query .= $this->_limit;
         }
 
 
+        if ($this->_option) {
 
-        if($this->_option) {
-
-            $query .= ' OPTION '.implode(', ', $this->_option);
+            $query .= ' OPTION ' . implode(', ', $this->_option);
         }
 
-        if($this->_facets) {
-            foreach($this->_facets as $facet)
-                $query .= ' FACET '.$facet;
+        if ($this->_facets) {
+            foreach ($this->_facets as $facet)
+                $query .= ' FACET ' . $facet;
         }
 
         $this->_sql = $query;
@@ -389,9 +387,9 @@ class Query
     /**
      * Alias of and_where()
      *
-     * @param   mixed $column column name or array($column, $alias) or object
-     * @param   string $op logic operator
-     * @param   mixed $value column value
+     * @param mixed  $column column name or array($column, $alias) or object
+     * @param string $op logic operator
+     * @param mixed  $value column value
      * @return  $this
      */
     public function where($column, $op, $value)
@@ -402,9 +400,9 @@ class Query
     /**
      * Creates a new "AND WHERE" condition for the query.
      *
-     * @param   mixed $column column name or array($column, $alias) or object
-     * @param   string $op logic operator
-     * @param   mixed $value column value
+     * @param mixed  $column column name or array($column, $alias) or object
+     * @param string $op logic operator
+     * @param mixed  $value column value
      * @return  $this
      */
     public function and_where($column, $op, $value)
@@ -417,9 +415,9 @@ class Query
     /**
      * Creates a new "OR WHERE" condition for the query.
      *
-     * @param   mixed $column column name or array($column, $alias) or object
-     * @param   string $op logic operator
-     * @param   mixed $value column value
+     * @param mixed  $column column name or array($column, $alias) or object
+     * @param string $op logic operator
+     * @param mixed  $value column value
      * @return  $this
      */
     public function or_where($column, $op, $value)
@@ -483,7 +481,7 @@ class Query
     {
         $group = end($this->_where);
 
-        if ($group AND reset($group) === '(') {
+        if ($group and reset($group) === '(') {
             array_pop($this->_where);
 
             return $this;
@@ -516,7 +514,8 @@ class Query
         return $this;
     }
 
-    public function option($option) {
+    public function option($option)
+    {
         $this->_option[] = $option;
 
         return $this;
@@ -526,13 +525,13 @@ class Query
     /**
      * Applies sorting with "ORDER BY ..."
      *
-     * @param   mixed $column column name or array($column, $alias) or array([$column, $direction], [$column, $direction], ...)
-     * @param   string $direction direction of sorting
+     * @param mixed  $column column name or array($column, $alias) or array([$column, $direction], [$column, $direction], ...)
+     * @param string $direction direction of sorting
      * @return  $this
      */
     public function order_by($column, $direction = null)
     {
-        if(is_array($column) AND $direction === null) {
+        if (is_array($column) and $direction === null) {
             $this->_order_by = $column;
         } else {
             $this->_order_by[] = [$column, $direction];
@@ -545,7 +544,7 @@ class Query
     /**
      * Return up to "LIMIT ..." results
      *
-     * @param   integer $number maximum results to return or NULL to reset
+     * @param integer $number maximum results to return or NULL to reset
      * @return  $this
      */
     public function limit($number)
@@ -568,7 +567,7 @@ class Query
     {
         $this->_facets[] = $query;
 
-        $this->_type = Database::MULTI_SELECT;
+        $this->_type = Sphinx::MULTI_SELECT;
 
         return $this;
     }
@@ -576,11 +575,10 @@ class Query
     /**** INSERT ****/
 
 
-
     /**
      * Sets the table to insert into.
      *
-     * @param   mixed $table table name or array($table, $alias) or object
+     * @param mixed $table table name or array($table, $alias) or object
      * @return  $this
      */
     public function table($table)
@@ -593,7 +591,7 @@ class Query
     /**
      * Set the columns that will be inserted.
      *
-     * @param   array $columns column names
+     * @param array $columns column names
      * @return  $this
      */
     public function columns(array $columns)
@@ -606,7 +604,7 @@ class Query
     /**
      * Adds or overwrites values. Multiple value sets can be added.
      *
-     * @param   array $values values list
+     * @param array $values values list
      * @param   ...
      * @return  $this
      */
@@ -625,7 +623,7 @@ class Query
     /**
      * Set the values to update with an associative array.
      *
-     * @param   array $pairs associative (column => value) list
+     * @param array $pairs associative (column => value) list
      * @return  $this
      */
     public function set(array $pairs)
@@ -640,12 +638,12 @@ class Query
     /**
      * Use a sub-query to for the inserted values.
      *
-     * @param   object $query Database_Query of SELECT type
+     * @param object $query Database_Query of SELECT type
      * @return  $this
      */
     public function subselect(Query $query)
     {
-        if ($query->type() !== Database::SELECT) {
+        if ($query->type() !== Sphinx::SELECT) {
             throw new SphinxqlException('Only SELECT queries can be combined with INSERT queries');
         }
 
@@ -657,7 +655,7 @@ class Query
     /**
      * Compile the SQL query and return it.
      *
-     * @param   mixed $db Database instance or name of instance
+     * @param mixed $db Database instance or name of instance
      * @return  string
      */
     public function compile_insert($db = NULL)
@@ -668,7 +666,9 @@ class Query
         }
 
         // Start an insertion query
-        $query = 'INSERT INTO ' . $db->quote_table($this->_table);
+        $query = ($this->_type === Sphinx::REPLACE
+                ? 'INSERT INTO '
+                : 'REPLACE INTO ') . $db->quote_table($this->_table);
 
         // Add the column names
         $query .= ' (' . implode(', ', array_map([$db, 'quote_column'], $this->_columns)) . ') ';
@@ -679,7 +679,7 @@ class Query
 
             foreach ($this->_values as $group) {
                 foreach ($group as $offset => $value) {
-                    if ((is_string($value) AND array_key_exists($value, $this->_parameters)) === false) {
+                    if ((is_string($value) and array_key_exists($value, $this->_parameters)) === false) {
                         // Quote the value, it is not a parameter
                         $group[$offset] = $db->quote($value);
                     }
@@ -703,7 +703,7 @@ class Query
     /**
      * Compile the SQL query and return it.
      *
-     * @param   mixed $db Database instance or name of instance
+     * @param mixed $db Database instance or name of instance
      * @return  string
      */
     public function compile_update($db = NULL)
@@ -748,38 +748,33 @@ class Query
 
     public function compile_delete($db = NULL)
     {
-        if ( ! is_object($db))
-        {
+        if (!is_object($db)) {
             // Get the database instance
-            $db = Database::instance($db);
+            $db = Sphinx::instance($db);
         }
 
         // Start a deletion query
-        $query = 'DELETE FROM '.$db->quote_table($this->_table);
+        $query = 'DELETE FROM ' . $db->quote_table($this->_table);
 
-        if ( ! empty($this->_where))
-        {
+        if (!empty($this->_where)) {
             // Add deletion conditions
-            $query .= ' WHERE '.$this->_compile_conditions($db, $this->_where);
+            $query .= ' WHERE ' . $this->_compile_conditions($db, $this->_where);
         }
 
-        if ( ! empty($this->_order_by))
-        {
+        if (!empty($this->_order_by)) {
             // Add sorting
-            $query .= ' '.$this->_compile_order_by($db, $this->_order_by);
+            $query .= ' ' . $this->_compile_order_by($db, $this->_order_by);
         }
 
-        if ($this->_limit !== NULL)
-        {
+        if ($this->_limit !== NULL) {
             // Add limiting
-            $query .= ' LIMIT '.$this->_limit;
+            $query .= ' LIMIT ' . $this->_limit;
         }
 
         $this->_sql = $query;
 
         return $query;
     }
-
 
 
     public function reset()
@@ -816,11 +811,11 @@ class Query
      * Compiles an array of conditions into an SQL partial. Used for WHERE
      * and HAVING.
      *
-     * @param   object $db Database instance
-     * @param   array $conditions condition statements
+     * @param object $db Database instance
+     * @param array  $conditions condition statements
      * @return  string
      */
-    protected function _compile_conditions(Database $db, array $conditions)
+    protected function _compile_conditions(Sphinx $db, array $conditions)
     {
         $last_condition = NULL;
 
@@ -829,7 +824,7 @@ class Query
             // Process groups of conditions
             foreach ($group as $logic => $condition) {
                 if ($condition === '(') {
-                    if (!empty($sql) AND $last_condition !== '(') {
+                    if (!empty($sql) and $last_condition !== '(') {
                         // Include logic operator
                         $sql .= ' ' . $logic . ' ';
                     }
@@ -838,7 +833,7 @@ class Query
                 } elseif ($condition === ')') {
                     $sql .= ')';
                 } else {
-                    if (!empty($sql) AND $last_condition !== '(') {
+                    if (!empty($sql) and $last_condition !== '(') {
                         // Add the logic operator
                         $sql .= ' ' . $logic . ' ';
                     }
@@ -859,23 +854,23 @@ class Query
                     // Database operators are always uppercase
                     $op = strtoupper($op);
 
-                    if ($op === 'BETWEEN' AND is_array($value)) {
+                    if ($op === 'BETWEEN' and is_array($value)) {
                         // BETWEEN always has exactly two arguments
                         list($min, $max) = $value;
 
-                        if ((is_string($min) AND array_key_exists($min, $this->_parameters)) === false) {
+                        if ((is_string($min) and array_key_exists($min, $this->_parameters)) === false) {
                             // Quote the value, it is not a parameter
                             $min = $db->quote($min);
                         }
 
-                        if ((is_string($max) AND array_key_exists($max, $this->_parameters)) === false) {
+                        if ((is_string($max) and array_key_exists($max, $this->_parameters)) === false) {
                             // Quote the value, it is not a parameter
                             $max = $db->quote($max);
                         }
 
                         // Quote the min and max value
                         $value = $min . ' AND ' . $max;
-                    } elseif ((is_string($value) AND array_key_exists($value, $this->_parameters)) === false) {
+                    } elseif ((is_string($value) and array_key_exists($value, $this->_parameters)) === false) {
                         // Quote the value, it is not a parameter
                         $value = $db->quote($value);
                     }
@@ -901,7 +896,7 @@ class Query
         return $sql;
     }
 
-    protected function _compile_match(Database $db, array $values)
+    protected function _compile_match(Sphinx $db, array $values)
     {
 
         $set = [];
@@ -912,26 +907,29 @@ class Query
             // Quote the column name
             //$column = $db->quote_column($column);
 
-            if (! ($value instanceof Expression) ) {
+            if ($value !== null && !($value instanceof Expression)) {
                 // Quote the value
                 $value = $db->escape_match($value);
             }
 
-            if($value === null) {
+            if($column instanceof Expression)
+                $column = $db->escape_match($column);
+
+            if ($value === null) {
                 $set[$column] = $column;
             } else {
                 $set[$column] = $column . ' ' . $value;
             }
         }
 
-        return "'".implode(' ', $set)."'";
+        return "'" . implode(' ', $set) . "'";
 
     }
 
     /**
      * Compiles an array of set values into an SQL partial. Used for UPDATE.
      *
-     * @param   array $values updated values
+     * @param array $values updated values
      * @return  string
      */
     protected function _compile_set(array $values)
@@ -944,7 +942,7 @@ class Query
             // Quote the column name
             $column = $this->db->quote_column($column);
 
-            if ((is_string($value) AND array_key_exists($value, $this->_parameters)) === false) {
+            if ((is_string($value) and array_key_exists($value, $this->_parameters)) === false) {
                 // Quote the value, it is not a parameter
                 $value = $this->db->quote($value);
             }
@@ -958,11 +956,11 @@ class Query
     /**
      * Compiles an array of GROUP BY columns into an SQL partial.
      *
-     * @param   object $db Database instance
-     * @param   array $columns
+     * @param object $db Database instance
+     * @param array  $columns
      * @return  string
      */
-    protected function _compile_group_by(Database $db, array $columns)
+    protected function _compile_group_by(Sphinx $db, array $columns)
     {
         $group = [];
 
@@ -984,11 +982,11 @@ class Query
     /**
      * Compiles an array of ORDER BY statements into an SQL partial.
      *
-     * @param   object $db Database instance
-     * @param   array $columns sorting columns
+     * @param object $db Database instance
+     * @param array  $columns sorting columns
      * @return  string
      */
-    protected function _compile_order_by(Database $db, array $columns)
+    protected function _compile_order_by(Sphinx $db, array $columns)
     {
         $sort = [];
         foreach ($columns as $group) {
@@ -1018,23 +1016,24 @@ class Query
      * Compile the SQL query and return it. Replaces any parameters with their
      * given values.
      *
-     * @param   mixed $db Database instance or name of instance
+     * @param mixed $db Database instance or name of instance
      * @return  string
      */
     public function compile()
     {
         // Compile the SQL query
         switch ($this->_type) {
-            case Database::SELECT:
+            case Sphinx::SELECT:
                 $sql = $this->compile_select();
                 break;
-            case Database::INSERT:
+            case Sphinx::INSERT:
+            case Sphinx::REPLACE:
                 $sql = $this->compile_insert();
                 break;
-            case Database::UPDATE:
+            case Sphinx::UPDATE:
                 $sql = $this->compile_update();
                 break;
-            case Database::DELETE:
+            case Sphinx::DELETE:
                 $sql = $this->compile_delete();
                 break;
         }
@@ -1054,9 +1053,9 @@ class Query
     /**
      * Execute the current query on the given database.
      *
-     * @param   mixed $db Database instance or name of instance
-     * @param   mixed $as_object result object classname, TRUE for stdClass or FALSE for array
-     * @param   array $object_params result object constructor arguments
+     * @param mixed $db Database instance or name of instance
+     * @param mixed $as_object result object classname, TRUE for stdClass or FALSE for array
+     * @param array $object_params result object constructor arguments
      * @return  Result   Result for SELECT queries
      * @return  mixed    the insert id for INSERT queries
      * @return  integer  number of affected rows for all other queries
@@ -1065,23 +1064,24 @@ class Query
     {
         // Compile the SQL query
         switch ($this->_type) {
-            case Database::SELECT:
-            case Database::MULTI_SELECT:
+            case Sphinx::SELECT:
+            case Sphinx::MULTI_SELECT:
                 $sql = $this->compile_select();
                 break;
-            case Database::INSERT:
+            case Sphinx::INSERT:
+            case Sphinx::REPLACE:
                 $sql = $this->compile_insert();
                 break;
-            case Database::UPDATE:
+            case Sphinx::UPDATE:
                 $sql = $this->compile_update();
                 break;
-            case Database::DELETE:
+            case Sphinx::DELETE:
                 $sql = $this->compile_delete();
                 break;
         }
 
         // Execute the query
-        $result =  $this->db->query($this->_type, $sql);
+        $result = $this->db->query($this->_type, $sql);
 
 
         return $result;
@@ -1091,13 +1091,13 @@ class Query
     /**
      * Set the table and columns for an insert.
      *
-     * @param   mixed $table table name or array($table, $alias) or object
-     * @param   array $insert_data "column name" => "value" assoc list
+     * @param mixed $table table name or array($table, $alias) or object
+     * @param array $insert_data "column name" => "value" assoc list
      * @return  $this
      */
     public function insert($table = NULL, array $insert_data = NULL)
     {
-        $this->_type = Database::INSERT;
+        $this->_type = Sphinx::INSERT;
 
         if ($table) {
             // Set the initial table name
@@ -1106,7 +1106,7 @@ class Query
 
         if ($insert_data) {
             $group = [];
-            foreach($insert_data as $key => $value) {
+            foreach ($insert_data as $key => $value) {
                 $this->_columns[] = $key;
                 $group[] = $value;
             }
@@ -1117,13 +1117,25 @@ class Query
     }
 
     /**
+     * @param null       $table
+     * @param array|null $insert_data
+     * @return $this
+     */
+    public function replace($table = NULL, array $insert_data = NULL) : Query
+    {
+        $this->insert($table, $insert_data);
+        $this->_type = Sphinx::REPLACE;
+        return $this;
+    }
+
+    /**
      *
-     * @param   string $table table name
+     * @param string $table table name
      * @return  Query
      */
-    public function update($table = NULL)
+    public function update($table = NULL) : Query
     {
-        $this->_type = Database::UPDATE;
+        $this->_type = Sphinx::UPDATE;
 
         if ($table !== NULL) {
             $this->table($table);
@@ -1133,9 +1145,9 @@ class Query
     }
 
 
-    public function delete($table = NULL)
+    public function delete($table = NULL) : Query
     {
-        $this->_type = Database::DELETE;
+        $this->_type = Sphinx::DELETE;
 
         if ($table !== NULL) {
             $this->table($table);
@@ -1144,32 +1156,30 @@ class Query
         return $this;
     }
 
-    public function index_by($column) {
+    public function index_by($column)
+    {
         $this->_index_by = $column;
 
         return $this;
     }
 
-    public function count() {
-        $this->_type = Database::SELECT;
+    public function count()
+    {
+        $this->_type = Sphinx::SELECT;
 
         $old_select = $this->_select;
         $old_order = $this->_order_by;
 
         $this->_select = [DB::expr('COUNT(*)')];
-        $as_object = $this->_as_object;
-        $this->_as_object = null;
 
         $this->_order_by = [];
 
-
         $result = $this->execute();
 
-        $count =  $this->execute()->column('COUNT(*)', 0);
+        $count = $this->execute()->column('COUNT(*)', 0);
 
         $this->_select = $old_select;
         $this->_order_by = $old_order;
-        $this->_as_object = $as_object;
 
         return $count;
     }
@@ -1193,7 +1203,6 @@ class Query
     {
         return $this->execute()->all();
     }
-
 
 
 }

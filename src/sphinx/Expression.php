@@ -1,6 +1,6 @@
 <?php
 
-namespace levmorozov\sphinxql;
+namespace levmorozov\mii_search\sphinx;
 
 /**
  * Database expressions can be used to add unescaped SQL fragments to a
@@ -105,7 +105,7 @@ class Expression {
      * @param   mixed    Database instance or name of instance
      * @return  string
      */
-    public function compile(Database $db = NULL) : string
+    public function compile(Sphinx $db = NULL) : string
     {
         if ($db === null)
         {

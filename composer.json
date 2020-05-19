@@ -1,5 +1,5 @@
 {
-  "name": "levmorozov/sphinxql",
+  "name": "levmorozov/mii-search",
   "type": "library",
   "description": "Mii SphinxQL component",
   "keywords": [
@@ -10,12 +10,12 @@
   "homepage": "https://github.com/levmorozov/sphinxql",
   "license": "MIT",
   "require": {
-    "php": ">=7.1",
-    "levmorozov/mii" : ">=1.7.0"
+    "php": ">=7.4",
+    "levmorozov/mii" : ">=1.9.0"
   },
   "autoload": {
     "psr-4": {
-      "levmorozov\\sphinxql\\": "src/"
+      "levmorozov\\mii_search\\": "src/"
     }
   }
 }
