@@ -25,7 +25,7 @@ class Expression {
      * @param   array   $parameters unquoted parameter values
      * @return  void
      */
-    public function __construct($value, $parameters = array())
+    public function __construct($value, $parameters = [])
     {
         // Set the expression string
         $this->_value = $value;
@@ -53,7 +53,7 @@ class Expression {
      * @param   mixed   $value  value to use
      * @return  $this
      */
-    public function param($param, $value)
+    public function param($param, $value): self
     {
         $this->_parameters[$param] = $value;
 
@@ -66,7 +66,7 @@ class Expression {
      * @param   array   $params list of parameter values
      * @return  $this
      */
-    public function parameters(array $params)
+    public function parameters(array $params): self
     {
         $this->_parameters = $params + $this->_parameters;
 
@@ -102,23 +102,16 @@ class Expression {
      * Compile the SQL expression and return it. Replaces any parameters with
      * their given values.
      *
-     * @param   mixed    Database instance or name of instance
      * @return  string
      */
-    public function compile(Sphinx $db = NULL) : string
+    public function compile() : string
     {
-        if ($db === null)
-        {
-            // Get the database instance
-            $db = \Mii::$app->db;
-        }
-
         $value = $this->value();
 
         if ( ! empty($this->_parameters))
         {
             // Quote all of the parameter values
-            $params = array_map([$db, 'quote'], $this->_parameters);
+            $params = array_map([Sphinx::class, 'quote'], $this->_parameters);
 
             // Replace the values in the expression
             $value = strtr($value, $params);

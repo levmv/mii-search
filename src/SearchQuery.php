@@ -4,7 +4,8 @@ namespace levmorozov\mii_search;
 
 use levmorozov\mii_search\sphinx\Sphinx;
 
-class SearchQuery {
+class SearchQuery
+{
 
     protected string $raw_q;
     protected array $words;
@@ -15,41 +16,42 @@ class SearchQuery {
 
     public function __construct(string $q, Sphinx $sphinx = null)
     {
-        $this->raw_q = $this->clean_query($q);
-        $this->words = explode(' ', $q);
-
         $this->sphinx = $sphinx ?? \Mii::$app->get('sphinx');
 
+        $this->raw_q = $this->clean_query($q);
+        $this->words = explode(' ', $q);
+        $this->word_count = count($this->words);
     }
 
 
-    protected function clean_query(string $q) : string
+    protected function clean_query(string $q): string
     {
-        $q = mb_strtolower(trim($q));
-        $q = str_replace([',', '«', '»', '!', '.'], ' ', $q);
+        $q = mb_strtolower($q);
         try {
-            $q = preg_replace('/\s+/', ' ', $q);
+            $q = preg_replace('/[^\w\s]+/mu', '', $q);
+            $q = preg_replace('/\s+/u', ' ', $q);
         } catch (\Throwable $t) {
             \Mii::error($t);
         }
-        return $q;
+        return trim($q);
     }
 
-    public function word_count() {
+    public function word_count()
+    {
         return $this->word_count;
     }
 
 
-
-    public function parse_meta(array $meta, bool $expanded = false) : array {
+    public function parse_meta(array $meta, bool $expanded = false): array
+    {
 
         $result = [];
 
         for ($i = 0; $i < $this->word_count(); $i++) {
-            if (isset($meta['keyword[' . $i . ']']) AND $meta['docs[' . $i . ']'] == 0) {
+            if (isset($meta['keyword[' . $i . ']']) and $meta['docs[' . $i . ']'] == 0) {
                 if ($expanded) {
                     $first = mb_substr($meta['keyword[' . $i . ']'], 0, 1);
-                    if ($first == '=' OR $first == '*')
+                    if ($first == '=' or $first == '*')
                         continue;
                 } else {
                     if (isset($this->normalized[$meta['keyword[' . $i . ']']]))

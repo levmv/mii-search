@@ -3,17 +3,18 @@
 namespace levmorozov\mii_search\sphinx;
 
 use mii\core\Component;
+use mii\db\Database;
+use mii\db\DatabaseException;
 
 
 class Sphinx extends Component
 {
-
     // Query types
-    public const SELECT  = 1;
-    public const INSERT  = 2;
+    public const SELECT = 1;
+    public const INSERT = 2;
     public const REPLACE = 3;
-    public const UPDATE  = 4;
-    public const DELETE  = 5;
+    public const UPDATE = 4;
+    public const DELETE = 5;
 
     public const MULTI = 6;
     public const MULTI_SELECT = 7;
@@ -21,33 +22,37 @@ class Sphinx extends Component
     protected string $hostname = '127.0.0.1';
     protected int $port = 9306;
 
-    protected $escape_chars = array(
-        '\\' => '\\\\',
-        '(' => '\(',
-        ')' => '\)',
-        '|' => '\|',
-        '-' => '\-',
-        '!' => '\!',
-        '@' => '\@',
-        '~' => '\~',
-        '"' => '\"',
-        '&' => '\&',
-        '/' => '\/',
-        '^' => '\^',
-        '$' => '\$',
-        '=' => '\=',
-        '<' => '\<',
-    );
+    protected static array $escape_from = ['\\', '(', ')', '|', '-', '!', '@', '~', '"', '&', '/', '^', '$', '=', '<'];
+    protected static array $escape_to = ['\\\\', '\(', '\)', '\|', '\-', '\!', '\@', '\~', '\"', '\&', '\/', '\^', '\$', '\=', '\<'];
+
 
     /**
      * @var  string  the last query executed
      */
-    public $last_query;
+    public string $last_query;
+
+    protected ?\mysqli $conn = null;
 
     /**
-     * @var \mysqli Raw server connection
+     * Connect to the sphinx. This is called automatically when the first query is executed.
+     *
+     * @return  void
+     * @throws SphinxqlException
      */
-    protected $_connection;
+    public function connect(): void
+    {
+        if ($this->conn)
+            return;
+
+        try {
+            $this->conn = new \mysqli($this->hostname, null, null, null, $this->port);
+        } catch (\Throwable $e) {
+            $this->conn = null;
+            throw new SphinxqlException($e->getMessage(), $e->getCode(), $e);
+        }
+
+        $this->conn->options(\MYSQLI_OPT_INT_AND_FLOAT_NATIVE, 1);
+    }
 
 
     public function __destruct()
@@ -56,252 +61,119 @@ class Sphinx extends Component
     }
 
 
-    public function disconnect()
+    public function disconnect(): bool
     {
         try {
             // Database is assumed disconnected
             $status = true;
 
-            if (is_resource($this->_connection)) {
-                if ($status = $this->_connection->close()) {
+            if (is_resource($this->conn)) {
+                if ($status = $this->conn->close()) {
                     // Clear the connection
-                    $this->_connection = NULL;
+                    $this->conn = NULL;
                 }
             }
         } catch (\Throwable $e) {
             // Database is probably not disconnected
-            $status = !is_resource($this->_connection);
+            $status = !is_resource($this->conn);
         }
 
         return $status;
     }
 
-    /**
-     * Connect to the sphinx. This is called automatically when the first query is executed.
-     *
-     * @return  void
-     * @throws SphinxqlException
-     */
-    public function connect() : void
+
+    public function query(int $type, string $sql)
     {
-        if ($this->_connection)
-            return;
+        $this->conn or $this->connect();
+        assert((config('debug') && ($benchmark = \mii\util\Profiler::start("Database", $sql))) || 1);
 
-        try {
-            $this->_connection = new \mysqli($this->hostname, '', '', '', $this->port, '');
-        } catch (\Throwable $e) {
-            $this->_connection = null;
-            throw new SphinxqlException($e->getMessage(), $e->getCode(), $e);
+        $result = $this->conn->query($sql);
+
+        if ($result === false || $this->conn->errno) {
+            assert((isset($benchmark) && \mii\util\Profiler::delete($benchmark)) || 1);
+
+            throw new SphinxqlException($this->conn->error . " [ $sql ]", $this->conn->errno);
         }
 
-        $this->_connection->options(\MYSQLI_OPT_INT_AND_FLOAT_NATIVE, 1);
-    }
-
-
-    public function query(?int $type, string $sql) : ?array  {
-        // Make sure the database is connected
-        $this->_connection or $this->connect();
-
-        $benchmark = false;
-        if (config('debug')) {
-            // Benchmark this query for the current instance
-            $benchmark = \mii\util\Profiler::start("Sphinx", $sql);
-        }
-
-        // Execute the query
-        if($type === Sphinx::MULTI_SELECT) {
-
-            $this->_connection->multi_query($sql);
-            $results = [];
-            do {
-
-                if($result = $this->_connection->store_result()) {
-                    $results[] = $result->fetch_all(MYSQLI_ASSOC);
-                    $result->free_result();
-                }
-
-            } while ($this->_connection->more_results() && $this->_connection->next_result());
-
-
-            return $results;
-        } else {
-            $result = $this->_connection->query($sql);
-        }
-
-        if ( $result === false || $this->_connection->errno ) {
-            if ($benchmark) {
-                // This benchmark is worthless
-                \mii\util\Profiler::delete($benchmark);
-            }
-
-            throw new SphinxqlException($this->_connection->error. " [ $sql ]", $this->_connection->errno);
-        }
-
-        if ($benchmark) {
-            \mii\util\Profiler::stop($benchmark);
-        }
+        assert((isset($benchmark) && \mii\util\Profiler::stop($benchmark)) || 1);
 
         // Set the last query
         $this->last_query = $sql;
 
-        if ($type === Sphinx::SELECT) {
-
-            return $result->fetch_all(MYSQLI_ASSOC);
+        switch ($type) {
+            case self::SELECT:
+                return $result->fetch_all(\MYSQLI_ASSOC);
+            case self::INSERT:
+                return $this->conn->inserted_id();
+            default:
+                return $this->conn->affected_rows();
         }
-        return null;
-    }
-
-    public function inserted_id() {
-        return $this->_connection->insert_id;
-    }
-
-    public function affected_rows() : int {
-        return $this->_connection->affected_rows;
-    }
-
-    public function quote_index($index) {
-        if (is_array($index)) {
-            list($index, $alias) = $index;
-            $alias = str_replace('`', '``', $alias);
-        }
-
-        if ($index instanceof Expression) {
-            // Compile the expression
-            $index = $index->compile($this);
-        } else {
-            // Convert to a string
-            $index = (string)$index;
-            $index = str_replace('`', '``', $index);
-            $index = '`' . $index . '`';
-        }
-
-        if (isset($alias)) {
-            // Attach table prefix to alias
-            $index .= ' AS ' . '`' . $alias . '`';
-        }
-
-        return $index;
-    }
-
-    public function escape_match($string) {
-        if ($string instanceof Expression) {
-            return $string->value();
-        }
-
-        // Make sure the database is connected
-        $this->_connection or $this->connect();
-
-        $string = mb_strtolower(str_replace(array_keys($this->escape_chars), array_values($this->escape_chars), $string), 'utf8');
-
-
-        if (($string = $this->_connection->real_escape_string((string)$string)) === false) {
-            throw new SphinxqlException($this->_connection->error, $this->_connection->errno);
-        }
-
-        return $string;
-
     }
 
     /**
-     * Quote a value for an SQL query.
-     *
-     *     $db->quote(NULL);   // 'NULL'
-     *     $db->quote(10);     // 10
-     *     $db->quote('fred'); // 'fred'
-     *
-     * Objects passed to this function will be converted to strings.
-     * [Database_Expression] objects will be compiled.
-     * [Database_Query] objects will be compiled and converted to a sub-query.
-     * All other objects will be converted using the `__toString` method.
-     *
-     * @param   mixed $value any value to quote
-     * @return  string
-     * @uses    Sphinx::escape
+     * @param string $sql
+     * @return array|null
+     * @throws SphinxqlException
      */
-    public function quote($value) : string
+    public function multi_query(string $sql): ?array
     {
-        if ($value === NULL) {
-            return 'NULL';
-        } elseif ($value === true) {
-            return "'1'";
-        } elseif ($value === false) {
-            return "'0'";
-        } elseif (is_int($value)) {
-            return (string)((int)$value);
-        } elseif (is_float($value)) {
-            // Convert to non-locale aware float to prevent possible commas
-            return sprintf('%F', $value);
-        } elseif (is_array($value)) {
-            return '(' . implode(', ', array_map([$this, __FUNCTION__], $value)) . ')';
-        } elseif (is_object($value)) {
-            if ($value instanceof Query) {
-                // Create a sub-query
-                return '(' . $value->compile($this) . ')';
-            } elseif ($value instanceof Expression) {
-                // Compile the expression
-                return $value->compile($this);
-            } else {
-                // Convert the object to a string
-                return $this->quote((string)$value);
-            }
+        $this->conn or $this->connect();
+        assert((config('debug') && ($benchmark = \mii\util\Profiler::start("Database", $sql))) || 1);
+
+        $results = [];
+
+        if (false !== ($succeed = $this->conn->multi_query($sql))) {
+            do {
+
+                if ($result = $this->conn->store_result()) {
+                    $results[] = $result->fetch_all(\MYSQLI_ASSOC);
+                    $result->free_result();
+                }
+
+            } while ($this->conn->more_results() && $this->conn->next_result());
         }
 
-        return $this->escape($value);
+        if ($succeed === false || $this->conn->errno) {
+            throw new SphinxqlException("{$this->conn->error} [ $sql ]", $this->conn->errno);
+        }
+
+        assert((isset($benchmark) && \mii\util\Profiler::stop($benchmark)) || 1);
+
+        return $results;
     }
 
-    /**
-     * Sanitize a string by escaping characters that could cause an SQL
-     * injection attack.
-     *
-     *     $value = $db->escape('any string');
-     *
-     * @param   string $value value to quote
-     * @return  string
-     */
-    public function escape($value) : string
+    public function update(string $query) : int {
+        $this->query(self::UPDATE, $query);
+        return $this->affected_rows();
+    }
+
+
+    public function inserted_id()
     {
-        // Make sure the database is connected
-        $this->_connection or $this->connect();
+        return $this->conn->insert_id;
+    }
 
-        if (($value = $this->_connection->real_escape_string((string)$value)) === false) {
-            throw new SphinxqlException($this->_connection->error, $this->_connection->errno);
-        }
-
-        // SQL standard is to use single-quotes for all values
-        return "'$value'";
+    public function affected_rows(): int
+    {
+        return $this->conn->affected_rows;
     }
 
     /**
      * Start a SQL transaction
      *
-     *     // Start the transactions
-     *     $db->begin();
-     *
-     *     try {
-     *          DB::insert('users')->values($user1)...
-     *          DB::insert('users')->values($user2)...
-     *          // Insert successful commit the changes
-     *          $db->commit();
-     *     }
-     *     catch (Database_Exception $e)
-     *     {
-     *          // Insert failed. Rolling back changes...
-     *          $db->rollback();
-     *      }
-     *
-     * @param string $mode transaction mode
      * @return  boolean
+     * @throws SphinxqlException
      */
-    public function begin($mode = NULL)
+    public function begin($mode = NULL): bool
     {
         // Make sure the database is connected
-        $this->_connection or $this->connect();
+        $this->conn or $this->connect();
 
-        if ($mode AND !$this->_connection->query("SET TRANSACTION ISOLATION LEVEL $mode")) {
-            throw new SphinxqlException($this->_connection->error, $this->_connection->errno);
+        if ($mode and !$this->conn->query("SET TRANSACTION ISOLATION LEVEL $mode")) {
+            throw new SphinxqlException($this->conn->error, $this->conn->errno);
         }
 
-        return (bool)$this->_connection->query('START TRANSACTION');
+        return (bool)$this->conn->query('START TRANSACTION');
     }
 
     /**
@@ -311,13 +183,14 @@ class Sphinx extends Component
      *     $db->commit();
      *
      * @return  boolean
+     * @throws SphinxqlException
      */
-    public function commit()
+    public function commit(): bool
     {
         // Make sure the database is connected
-        $this->_connection or $this->connect();
+        $this->conn or $this->connect();
 
-        return (bool)$this->_connection->query('COMMIT');
+        return (bool)$this->conn->query('COMMIT');
     }
 
     /**
@@ -328,47 +201,44 @@ class Sphinx extends Component
      *
      * @return  boolean
      */
-    public function rollback()
+    public function rollback(): bool
     {
         // Make sure the database is connected
-        $this->_connection or $this->connect();
+        $this->conn or $this->connect();
 
-        return (bool)$this->_connection->query('ROLLBACK');
+        return (bool)$this->conn->query('ROLLBACK');
+    }
+
+
+    /**
+     * @param int|null $type
+     * @return QueryBuilder
+     */
+    public function query_builder(int $type = null) : QueryBuilder
+    {
+        return new QueryBuilder($type, $this);
     }
 
     /**
-     * Quote a database column name and add the table prefix if needed.
+     * Quote a database column name
      *
-     *     $column = $db->quote_column($column);
-     *
-     * You can also use SQL methods within identifiers.
-     *
-     *     $column = $db->quote_column(DB::expr('COUNT(`column`)'));
-     *
-     * Objects passed to this function will be converted to strings.
-     * [Database_Expression] objects will be compiled.
-     * [Database_Query] objects will be compiled and converted to a sub-query.
-     * All other objects will be converted using the `__toString` method.
-     *
-     * @param   mixed $column column name or array(column, alias)
+     * @param mixed $column column name or array(column, alias)
      * @return  string
      * @uses    Sphinx::quote_identifier
-     * @uses    Sphinx::table_prefix
      */
-    public function quote_column($column) : string
+    public static function quote_column($column): string
     {
-
         if (is_array($column)) {
-            list($column, $alias) = $column;
+            [$column, $alias] = $column;
             $alias = str_replace('`', '``', $alias);
         }
 
-        if ($column instanceof Query) {
+        if ($column instanceof QueryBuilder) {
             // Create a sub-query
-            $column = '(' . $column->compile($this) . ')';
+            $column = '(' . $column->compile() . ')';
         } elseif ($column instanceof Expression) {
             // Compile the expression
-            $column = $column->compile($this);
+            $column = $column->compile();
         } else {
             // Convert to a string
             $column = (string)$column;
@@ -380,33 +250,116 @@ class Sphinx extends Component
             } elseif (strpos($column, '.') !== false) {
                 $parts = explode('.', $column);
 
-                if ($prefix = $this->table_prefix()) {
-                    // Get the offset of the table name, 2nd-to-last part
-                    $offset = count($parts) - 2;
-
-                    // Add the table prefix to the table name
-                    $parts[$offset] = $prefix . $parts[$offset];
-                }
-
                 foreach ($parts as & $part) {
                     if ($part !== '*') {
                         // Quote each of the parts
-                        $part = '`' . $part . '`';
+                        $part = "`$part`";
                     }
                 }
 
                 $column = implode('.', $parts);
             } else {
-                $column = '`' . $column . '`';
+                $column = "`$column`";
             }
         }
 
         if (isset($alias)) {
-            $column .= ' AS ' . '`' . $alias . '`';
+            $column .= " AS `$alias`";
         }
 
         return $column;
     }
+
+    public static function quote_index($index) : string
+    {
+        if (is_array($index)) {
+            [$index, $alias] = $index;
+            $alias = \str_replace('`', '``', $alias);
+        }
+
+        if ($index instanceof Expression) {
+            // Compile the expression
+            $index = $index->compile();
+        } else {
+            // Convert to a string
+            $index = (string)$index;
+            $index = str_replace('`', '``', $index);
+            $index = "`$index`";
+        }
+
+        if (isset($alias)) {
+            // Attach table prefix to alias
+            $index .= " AS `$alias`";
+        }
+
+        return $index;
+    }
+
+    public static function escape_match($string): string
+    {
+        if ($string instanceof Expression) {
+            return $string->value();
+        }
+
+        return \str_replace(self::$escape_from, self::$escape_to, (string)$string);
+    }
+
+    /**
+     * Quote a value for an SQL query.
+     *
+     *
+     * Objects passed to this function will be converted to strings.
+     * [Expression] objects will be compiled.
+     * [Query] objects will be compiled and converted to a sub-query.
+     * All other objects will be converted using the `__toString` method.
+     *
+     * @param mixed $value any value to quote
+     * @return  string
+     * @uses    Sphinx::escape
+     */
+    public static function quote($value): string
+    {
+        if (\is_null($value)) {
+            return 'NULL';
+        } elseif ($value === true) {
+            return "'1'";
+        } elseif ($value === false) {
+            return "'0'";
+        } elseif (\is_int($value)) {
+            return (string)$value;
+        } elseif (is_float($value)) {
+            // Convert to non-locale aware float to prevent possible commas
+            return sprintf('%F', $value);
+        } elseif (is_array($value)) {
+            return '(' . implode(', ', array_map([static::class, __FUNCTION__], $value)) . ')';
+        } elseif (is_object($value)) {
+            if ($value instanceof QueryBuilder) {
+                // Create a sub-query
+                return '(' . $value->compile() . ')';
+            } elseif ($value instanceof Expression) {
+                // Compile the expression
+                return $value->compile();
+            }
+        }
+
+        return self::escape((string)$value);
+    }
+
+    /**
+     * Sanitize a string by escaping characters that could cause an SQL
+     * injection attack.
+     *
+     * @param string $value value to quote
+     * @return  string
+     */
+    public static function escape(string $value): string
+    {
+        $value = preg_replace('~[\x00\x0A\x0D\x1A\x22\x27\x5C]~u', '\\\$0', $value);
+
+        // SQL standard is to use single-quotes for all values
+        return "'$value'";
+    }
+
 
     /**
      * Quote a database identifier
@@ -416,10 +369,10 @@ class Sphinx extends Component
      * [Database_Query] objects will be compiled and converted to a sub-query.
      * All other objects will be converted using the `__toString` method.
      *
-     * @param   mixed $value any identifier
+     * @param mixed $value any identifier
      * @return  string
      */
-    public function quote_identifier($value) : string
+    public function quote_identifier($value): string
     {
 
         if (is_array($value)) {
@@ -427,12 +380,12 @@ class Sphinx extends Component
             $alias = str_replace('`', '``', $alias);
         }
 
-        if ($value instanceof Query) {
+        if ($value instanceof QueryBuilder) {
             // Create a sub-query
-            $value = '(' . $value->compile($this) . ')';
+            $value = '(' . $value->compile() . ')';
         } elseif ($value instanceof Expression) {
             // Compile the expression
-            $value = $value->compile($this);
+            $value = $value->compile();
         } else {
             // Convert to a string
             $value = (string)$value;
@@ -454,10 +407,26 @@ class Sphinx extends Component
         }
 
         if (isset($alias)) {
-            $value .= ' AS ' . '`' . $alias . '`';
+            $value .= " AS `$alias`";
         }
 
         return $value;
+    }
+
+
+    public function call_keywords(string $text, string $index, array $options = null): array
+    {
+        if (!$options) {
+            $opts = '1 as fold_wildcards,1 as fold_lemmas,1 as fold_blended,1 as expansion_limit,1 as stats';
+        } else {
+            $opts = [];
+            foreach ($options as $opt_name) {
+                $opts[] = "1 as $opt_name";
+            }
+            $opts = implode(',', $opts);
+        }
+
+        return $this->query(self::SELECT, "CALL KEYWORDS(" . self::escape($text) . ", '$index', $opts");
     }
 
 }
