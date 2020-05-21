@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace levmorozov\mii_search;
+namespace mii\search;
 
-use levmorozov\mii_search\sphinx\Sphinx;
+use mii\search\sphinx\Sphinx;
 
 class SearchQuery
 {
@@ -39,6 +39,11 @@ class SearchQuery
     public function word_count()
     {
         return $this->word_count;
+    }
+
+    public function text() : string
+    {
+        return $this->raw_q;
     }
 
 

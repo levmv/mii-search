@@ -1,15 +1,14 @@
 <?php declare(strict_types=1);
 
-namespace levmorozov\mii_search\sphinx;
+namespace mii\search\sphinx;
 
 use mii\core\Component;
-use mii\db\Database;
-use mii\db\DatabaseException;
 
 
 class Sphinx extends Component
 {
     // Query types
+    public const RAW    = 0;
     public const SELECT = 1;
     public const INSERT = 2;
     public const REPLACE = 3;
@@ -145,6 +144,19 @@ class Sphinx extends Component
     public function update(string $query) : int {
         $this->query(self::UPDATE, $query);
         return $this->affected_rows();
+    }
+
+    public function optimize(string $index) : int {
+        return $this->query(self::RAW, "OPTIMIZE INDEX $index");
+    }
+
+
+    public function flush_rtindex(string $index) : int {
+        return $this->query(self::RAW, "FLUSH RTINDEX $index");
+    }
+
+    public function truncate_rtindex(string $index) : int {
+        return $this->query(self::RAW, "TRUNCATE RTINDEX $index");
     }
 
 

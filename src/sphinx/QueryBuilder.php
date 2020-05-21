@@ -1,10 +1,9 @@
 <?php declare(strict_types=1);
 
-namespace levmorozov\mii_search\sphinx;
+namespace mii\search\sphinx;
 
 use mii\valid\Rules;
 use mii\web\Exception;
-use mii\web\Pagination;
 
 /**
  * Database Query Builder
@@ -17,7 +16,7 @@ class QueryBuilder
     protected Sphinx $db;
 
     // Query type
-    protected int $_type;
+    protected ?int $_type;
 
     protected $_index;
 

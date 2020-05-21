@@ -17,7 +17,7 @@
   },
   "autoload": {
     "psr-4": {
-      "levmorozov\\mii_search\\": "src/"
+      "mii\\search\\": "src/"
     }
   }
 }

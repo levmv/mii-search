@@ -1,6 +1,6 @@
 <?php
 
-namespace levmorozov\mii_search\sphinx;
+namespace mii\search\sphinx;
 
 /**
  * Database expressions can be used to add unescaped SQL fragments to a
