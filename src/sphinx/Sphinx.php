@@ -103,9 +103,9 @@ class Sphinx extends Component
             case self::SELECT:
                 return $result->fetch_all(\MYSQLI_ASSOC);
             case self::INSERT:
-                return $this->conn->inserted_id();
+                return $this->inserted_id();
             default:
-                return $this->conn->affected_rows();
+                return $this->affected_rows();
         }
     }
 
