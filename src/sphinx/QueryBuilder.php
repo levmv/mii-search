@@ -560,7 +560,7 @@ class QueryBuilder
     {
         // Start an insertion query
 
-        $query = ($this->_type === Sphinx::REPLACE) ? 'INSERT INTO ' : 'REPLACE INTO ';
+        $query = ($this->_type === Sphinx::REPLACE) ? 'REPLACE INTO ' : 'INSERT INTO ';
 
         $query .= Sphinx::quote_index($this->_index);
 
