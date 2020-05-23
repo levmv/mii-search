@@ -366,7 +366,10 @@ class Sphinx extends Component
      */
     public static function escape(string $value): string
     {
-        $value = preg_replace('~[\x00\x0A\x0D\x1A\x22\x27\x5C]~u', '\\\$0', $value);
+        static $patterns     =	['/[\x27\x22\x5C]/u', '/\x0A/u', '/\x0D/u', '/\x00/u', '/\x1A/u'];
+        static $replacements =	['\\\$0', '\n', '\r', '\0', '\Z'];
+
+        $value = preg_replace($patterns, $replacements, $value);
 
         // SQL standard is to use single-quotes for all values
         return "'$value'";
