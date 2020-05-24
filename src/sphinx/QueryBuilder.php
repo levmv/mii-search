@@ -714,7 +714,7 @@ class QueryBuilder
         if ($this->_limit !== NULL) {
             // Add limiting
 
-            $query .= $this->_offset !== null
+            $query .= $this->_offset === null
                 ? " LIMIT {$this->_limit}"
                 : " LIMIT {$this->_offset}, {$this->_limit}";
         }
