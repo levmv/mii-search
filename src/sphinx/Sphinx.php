@@ -4,7 +4,6 @@ namespace mii\search\sphinx;
 
 use mii\core\Component;
 
-
 class Sphinx extends Component
 {
     // Query types
@@ -40,8 +39,9 @@ class Sphinx extends Component
      */
     public function connect(): void
     {
-        if ($this->conn)
+        if ($this->conn) {
             return;
+        }
 
         try {
             $this->conn = new \mysqli($this->hostname, null, null, null, $this->port);
@@ -66,15 +66,15 @@ class Sphinx extends Component
             // Database is assumed disconnected
             $status = true;
 
-            if (is_resource($this->conn)) {
+            if (\is_resource($this->conn)) {
                 if ($status = $this->conn->close()) {
                     // Clear the connection
-                    $this->conn = NULL;
+                    $this->conn = null;
                 }
             }
         } catch (\Throwable $e) {
             // Database is probably not disconnected
-            $status = !is_resource($this->conn);
+            $status = !\is_resource($this->conn);
         }
 
         return $status;
@@ -84,17 +84,17 @@ class Sphinx extends Component
     public function query(int $type, string $sql)
     {
         $this->conn or $this->connect();
-        assert((config('debug') && ($benchmark = \mii\util\Profiler::start("Database", $sql))) || 1);
+        \assert((config('debug') && ($benchmark = \mii\util\Profiler::start('Database', $sql))) || 1);
 
         $result = $this->conn->query($sql);
 
         if ($result === false || $this->conn->errno) {
-            assert((isset($benchmark) && \mii\util\Profiler::delete($benchmark)) || 1);
+            \assert((isset($benchmark) && \mii\util\Profiler::delete($benchmark)) || 1);
 
             throw new SphinxqlException($this->conn->error . " [ $sql ]", $this->conn->errno);
         }
 
-        assert((isset($benchmark) && \mii\util\Profiler::stop($benchmark)) || 1);
+        \assert((isset($benchmark) && \mii\util\Profiler::stop($benchmark)) || 1);
 
         // Set the last query
         $this->last_query = $sql;
@@ -117,18 +117,16 @@ class Sphinx extends Component
     public function multi_query(string $sql): ?array
     {
         $this->conn or $this->connect();
-        assert((config('debug') && ($benchmark = \mii\util\Profiler::start("Database", $sql))) || 1);
+        \assert((config('debug') && ($benchmark = \mii\util\Profiler::start('Database', $sql))) || 1);
 
         $results = [];
 
         if (false !== ($succeed = $this->conn->multi_query($sql))) {
             do {
-
                 if ($result = $this->conn->store_result()) {
                     $results[] = $result->fetch_all(\MYSQLI_ASSOC);
                     $result->free_result();
                 }
-
             } while ($this->conn->more_results() && $this->conn->next_result());
         }
 
@@ -136,26 +134,30 @@ class Sphinx extends Component
             throw new SphinxqlException("{$this->conn->error} [ $sql ]", $this->conn->errno);
         }
 
-        assert((isset($benchmark) && \mii\util\Profiler::stop($benchmark)) || 1);
+        \assert((isset($benchmark) && \mii\util\Profiler::stop($benchmark)) || 1);
 
         return $results;
     }
 
-    public function update(string $query) : int {
+    public function update(string $query) : int
+    {
         $this->query(self::UPDATE, $query);
         return $this->affected_rows();
     }
 
-    public function optimize(string $index) : int {
+    public function optimize(string $index) : int
+    {
         return $this->query(self::RAW, "OPTIMIZE INDEX $index");
     }
 
 
-    public function flush_rtindex(string $index) : int {
+    public function flush_rtindex(string $index) : int
+    {
         return $this->query(self::RAW, "FLUSH RTINDEX $index");
     }
 
-    public function truncate_rtindex(string $index) : int {
+    public function truncate_rtindex(string $index) : int
+    {
         return $this->query(self::RAW, "TRUNCATE RTINDEX $index");
     }
 
@@ -176,7 +178,7 @@ class Sphinx extends Component
      * @return  boolean
      * @throws SphinxqlException
      */
-    public function begin($mode = NULL): bool
+    public function begin($mode = null): bool
     {
         // Make sure the database is connected
         $this->conn or $this->connect();
@@ -185,7 +187,7 @@ class Sphinx extends Component
             throw new SphinxqlException($this->conn->error, $this->conn->errno);
         }
 
-        return (bool)$this->conn->query('START TRANSACTION');
+        return (bool) $this->conn->query('START TRANSACTION');
     }
 
     /**
@@ -202,7 +204,7 @@ class Sphinx extends Component
         // Make sure the database is connected
         $this->conn or $this->connect();
 
-        return (bool)$this->conn->query('COMMIT');
+        return (bool) $this->conn->query('COMMIT');
     }
 
     /**
@@ -218,7 +220,7 @@ class Sphinx extends Component
         // Make sure the database is connected
         $this->conn or $this->connect();
 
-        return (bool)$this->conn->query('ROLLBACK');
+        return (bool) $this->conn->query('ROLLBACK');
     }
 
 
@@ -226,7 +228,7 @@ class Sphinx extends Component
      * @param int|null $type
      * @return QueryBuilder
      */
-    public function query_builder(int $type = null) : QueryBuilder
+    public function queryBuilder(int $type = null) : QueryBuilder
     {
         return new QueryBuilder($type, $this);
     }
@@ -236,13 +238,13 @@ class Sphinx extends Component
      *
      * @param mixed $column column name or array(column, alias)
      * @return  string
-     * @uses    Sphinx::quote_identifier
+     * @uses    Sphinx::quoteIdentifier
      */
-    public static function quote_column($column): string
+    public static function quoteColumn($column): string
     {
-        if (is_array($column)) {
+        if (\is_array($column)) {
             [$column, $alias] = $column;
-            $alias = str_replace('`', '``', $alias);
+            $alias = \str_replace('`', '``', $alias);
         }
 
         if ($column instanceof QueryBuilder) {
@@ -253,23 +255,23 @@ class Sphinx extends Component
             $column = $column->compile();
         } else {
             // Convert to a string
-            $column = (string)$column;
+            $column = (string) $column;
 
-            $column = str_replace('`', '``', $column);
+            $column = \str_replace('`', '``', $column);
 
             if ($column === '*') {
                 return $column;
-            } elseif (strpos($column, '.') !== false) {
-                $parts = explode('.', $column);
+            } elseif (\strpos($column, '.') !== false) {
+                $parts = \explode('.', $column);
 
-                foreach ($parts as & $part) {
+                foreach ($parts as &$part) {
                     if ($part !== '*') {
                         // Quote each of the parts
                         $part = "`$part`";
                     }
                 }
 
-                $column = implode('.', $parts);
+                $column = \implode('.', $parts);
             } else {
                 $column = "`$column`";
             }
@@ -282,9 +284,9 @@ class Sphinx extends Component
         return $column;
     }
 
-    public static function quote_index($index) : string
+    public static function quoteIndex($index) : string
     {
-        if (is_array($index)) {
+        if (\is_array($index)) {
             [$index, $alias] = $index;
             $alias = \str_replace('`', '``', $alias);
         }
@@ -294,8 +296,8 @@ class Sphinx extends Component
             $index = $index->compile();
         } else {
             // Convert to a string
-            $index = (string)$index;
-            $index = str_replace('`', '``', $index);
+            $index = (string) $index;
+            $index = \str_replace('`', '``', $index);
             $index = "`$index`";
         }
 
@@ -307,13 +309,13 @@ class Sphinx extends Component
         return $index;
     }
 
-    public static function escape_match($string): string
+    public static function escapeMatch($string): string
     {
         if ($string instanceof Expression) {
             return $string->value();
         }
 
-        return \str_replace(self::$escape_from, self::$escape_to, (string)$string);
+        return \str_replace(self::$escape_from, self::$escape_to, (string) $string);
     }
 
     /**
@@ -338,13 +340,13 @@ class Sphinx extends Component
         } elseif ($value === false) {
             return "'0'";
         } elseif (\is_int($value)) {
-            return (string)$value;
-        } elseif (is_float($value)) {
+            return (string) $value;
+        } elseif (\is_float($value)) {
             // Convert to non-locale aware float to prevent possible commas
-            return sprintf('%F', $value);
-        } elseif (is_array($value)) {
-            return '(' . implode(', ', array_map([static::class, __FUNCTION__], $value)) . ')';
-        } elseif (is_object($value)) {
+            return \sprintf('%F', $value);
+        } elseif (\is_array($value)) {
+            return '(' . \implode(', ', \array_map([static::class, __FUNCTION__], $value)) . ')';
+        } elseif (\is_object($value)) {
             if ($value instanceof QueryBuilder) {
                 // Create a sub-query
                 return '(' . $value->compile() . ')';
@@ -354,7 +356,7 @@ class Sphinx extends Component
             }
         }
 
-        return self::escape((string)$value);
+        return self::escape((string) $value);
     }
 
     /**
@@ -369,7 +371,7 @@ class Sphinx extends Component
         static $patterns     =	['/[\x27\x22\x5C]/u', '/\x0A/u', '/\x0D/u', '/\x00/u', '/\x1A/u'];
         static $replacements =	['\\\$0', '\n', '\r', '\0', '\Z'];
 
-        $value = preg_replace($patterns, $replacements, $value);
+        $value = \preg_replace($patterns, $replacements, $value);
 
         // SQL standard is to use single-quotes for all values
         return "'$value'";
@@ -387,12 +389,11 @@ class Sphinx extends Component
      * @param mixed $value any identifier
      * @return  string
      */
-    public function quote_identifier($value): string
+    public function quoteIdentifier($value): string
     {
-
-        if (is_array($value)) {
-            list($value, $alias) = $value;
-            $alias = str_replace('`', '``', $alias);
+        if (\is_array($value)) {
+            [$value, $alias] = $value;
+            $alias = \str_replace('`', '``', $alias);
         }
 
         if ($value instanceof QueryBuilder) {
@@ -403,19 +404,19 @@ class Sphinx extends Component
             $value = $value->compile();
         } else {
             // Convert to a string
-            $value = (string)$value;
+            $value = (string) $value;
 
-            $value = str_replace('`', '``', $value);
+            $value = \str_replace('`', '``', $value);
 
-            if (strpos($value, '.') !== false) {
-                $parts = explode('.', $value);
+            if (\strpos($value, '.') !== false) {
+                $parts = \explode('.', $value);
 
-                foreach ($parts as & $part) {
+                foreach ($parts as &$part) {
                     // Quote each of the parts
                     $part = '`' . $part . '`';
                 }
 
-                $value = implode('.', $parts);
+                $value = \implode('.', $parts);
             } else {
                 $value = '`' . $value . '`';
             }
@@ -429,7 +430,7 @@ class Sphinx extends Component
     }
 
 
-    public function call_keywords(string $text, string $index, array $options = null): array
+    public function callKeywords(string $text, string $index, array $options = null): array
     {
         if (!$options) {
             $opts = '1 as fold_wildcards,1 as fold_lemmas,1 as fold_blended,1 as expansion_limit,1 as stats';
@@ -438,10 +439,9 @@ class Sphinx extends Component
             foreach ($options as $opt_name) {
                 $opts[] = "1 as $opt_name";
             }
-            $opts = implode(',', $opts);
+            $opts = \implode(',', $opts);
         }
 
-        return $this->query(self::SELECT, "CALL KEYWORDS(" . self::escape($text) . ", '$index', $opts");
+        return $this->query(self::SELECT, 'CALL KEYWORDS(' . self::escape($text) . ", '$index', $opts");
     }
-
 }

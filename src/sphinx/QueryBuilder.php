@@ -144,9 +144,9 @@ class QueryBuilder
      * @param mixed $columns column name or alias
      * @return  $this
      */
-    public function group_by(...$columns) : self
+    public function groupBy(...$columns) : self
     {
-        $this->_group_by = array_merge($this->_group_by, $columns);
+        $this->_group_by = \array_merge($this->_group_by, $columns);
 
         return $this;
     }
@@ -161,7 +161,7 @@ class QueryBuilder
      */
     public function having($column = null, $op = null, $value = null) : self
     {
-        return $this->and_having($column, $op, $value);
+        return $this->andHaving($column, $op, $value);
     }
 
     /**
@@ -172,7 +172,7 @@ class QueryBuilder
      * @param mixed  $value column value
      * @return  $this
      */
-    public function and_having($column, $op, $value = NULL) : self
+    public function andHaving($column, $op, $value = null) : self
     {
         if ($column === null) {
             $this->_having[] = ['AND' => '('];
@@ -196,7 +196,7 @@ class QueryBuilder
      * @param mixed  $value column value
      * @return  $this
      */
-    public function or_having($column = null, $op = null, $value = null) : self
+    public function orHaving($column = null, $op = null, $value = null) : self
     {
         if ($column === null) {
             $this->_having[] = ['OR' => '('];
@@ -239,7 +239,7 @@ class QueryBuilder
      */
     public function where($column = null, $op = null, $value = null) : self
     {
-        return $this->and_where($column, $op, $value);
+        return $this->andWhere($column, $op, $value);
     }
 
     /**
@@ -252,7 +252,7 @@ class QueryBuilder
      */
     public function filter($column, $op, $value)
     {
-        return $this->and_filter($column, $op, $value);
+        return $this->andFilter($column, $op, $value);
     }
 
     /**
@@ -263,9 +263,8 @@ class QueryBuilder
      * @param mixed  $value column value
      * @return  $this
      */
-    public function and_where($column, $op = null, $value = null)
+    public function andWhere($column, $op = null, $value = null)
     {
-
         if ($column === null) {
             $this->_where[] = ['AND' => '('];
             $this->_last_condition_where = true;
@@ -289,12 +288,13 @@ class QueryBuilder
      * @param mixed  $value column value
      * @return  $this
      */
-    public function and_filter($column, $op, $value)
+    public function andFilter($column, $op, $value)
     {
-        if ($value === null || $value === "" || !Rules::not_empty((\is_string($value) ? trim($value) : $value)))
+        if ($value === null || $value === '' || !Rules::not_empty((\is_string($value) ? \trim($value) : $value))) {
             return $this;
+        }
 
-        return $this->and_where($column, $op, $value);
+        return $this->andWhere($column, $op, $value);
     }
 
 
@@ -306,19 +306,15 @@ class QueryBuilder
      * @param mixed  $value column value
      * @return  $this
      */
-    public function or_where($column = null, $op = null, $value = null) : self
+    public function orWhere($column = null, $op = null, $value = null) : self
     {
         if ($column === null) {
-
             $this->_where[] = ['OR' => '('];
             $this->_last_condition_where = true;
-
         } elseif (\is_array($column)) {
-
             foreach ($column as $row) {
                 $this->_where[] = ['OR' => $row];
             }
-
         } else {
             $this->_where[] = ['OR' => [$column, $op, $value]];
         }
@@ -326,25 +322,8 @@ class QueryBuilder
         return $this;
     }
 
-    /**
-     * Creates a new "OR WHERE" condition for the query.
-     *
-     * @param mixed  $column column name or array($column, $alias) or object
-     * @param string $op logic operator
-     * @param mixed  $value column value
-     * @return  $this
-     */
-    public function or_filter($column, $op, $value)
-    {
-        if ($value === null || $value === "" || !Rules::not_empty((\is_string($value) ? trim($value) : $value)))
-            return $this;
-
-        return $this->or_where($column, $op, $value);
-    }
-
     public function end(bool $check_for_empty = false) : self
     {
-
         if ($this->_last_condition_where) {
             if ($check_for_empty !== false) {
                 $group = \end($this->_where);
@@ -356,9 +335,7 @@ class QueryBuilder
             }
 
             $this->_where[] = ['' => ')'];
-
         } else {
-
             if ($check_for_empty !== false) {
                 $group = \end($this->_having);
 
@@ -369,32 +346,7 @@ class QueryBuilder
             }
 
             $this->_having[] = ['' => ')'];
-
         }
-
-        return $this;
-    }
-
-    /**
-     * Closes an open "WHERE (...)" grouping.
-     *
-     * @return  $this
-     */
-    public function and_where_close() : self
-    {
-        $this->_where[] = ['AND' => ')'];
-
-        return $this;
-    }
-
-    /**
-     * Closes an open "WHERE (...)" grouping.
-     *
-     * @return  $this
-     */
-    public function or_where_close() : self
-    {
-        $this->_where[] = ['OR' => ')'];
 
         return $this;
     }
@@ -407,7 +359,7 @@ class QueryBuilder
      * @param string $direction direction of sorting
      * @return  $this
      */
-    public function order_by($column, $direction = null) : self
+    public function orderBy($column, $direction = null) : self
     {
         if (\is_array($column) && $direction === null) {
             $this->_order_by = $column;
@@ -495,7 +447,7 @@ class QueryBuilder
             throw new Exception('INSERT INTO ... SELECT statements cannot be combined with INSERT INTO ... VALUES');
         }
 
-        $this->_values = array_merge($this->_values, $values);
+        $this->_values = \array_merge($this->_values, $values);
 
         return $this;
     }
@@ -542,9 +494,9 @@ class QueryBuilder
         $this->_distinct = false;
 
         $this->_limit =
-        $this->_offset = NULL;
+        $this->_offset = null;
 
-        $this->_index = NULL;
+        $this->_index = null;
         $this->_columns =
         $this->_values = [];
 
@@ -556,19 +508,18 @@ class QueryBuilder
      *
      * @return  string
      */
-    public function compile_insert(): string
+    public function compileInsert(): string
     {
         // Start an insertion query
 
         $query = ($this->_type === Sphinx::REPLACE) ? 'REPLACE INTO ' : 'INSERT INTO ';
 
-        $query .= Sphinx::quote_index($this->_index);
+        $query .= Sphinx::quoteIndex($this->_index);
 
         // Add the column names
-        $query .= ' (' . implode(', ', array_map([$this->db, 'quote_column'], $this->_columns)) . ') ';
+        $query .= ' (' . \implode(', ', \array_map([$this->db, 'quoteColumn'], $this->_columns)) . ') ';
 
         if (\is_array($this->_values)) {
-
             $groups = [];
 
             foreach ($this->_values as $group) {
@@ -576,14 +527,14 @@ class QueryBuilder
                     $group[$offset] = Sphinx::quote($value);
                 }
 
-                $groups[] = '(' . implode(', ', $group) . ')';
+                $groups[] = '(' . \implode(', ', $group) . ')';
             }
 
             // Add the values
-            $query .= 'VALUES ' . implode(', ', $groups);
+            $query .= 'VALUES ' . \implode(', ', $groups);
         } else {
             // Add the sub-query
-            $query .= (string)$this->_values;
+            $query .= (string) $this->_values;
         }
 
         return $query;
@@ -592,33 +543,32 @@ class QueryBuilder
     /**
      * Compile the SQL query and return it.
      */
-    public function compile_update(): string
+    public function compileUpdate(): string
     {
-        $query = 'UPDATE ' . Sphinx::quote_index($this->_index);
+        $query = 'UPDATE ' . Sphinx::quoteIndex($this->_index);
 
         // Add the columns to update
         $set = [];
         foreach ($this->_set as [$column, $value]) {
-
-            $column = Sphinx::quote_column($column);
+            $column = Sphinx::quoteColumn($column);
 
             $value = Sphinx::quote($value);
 
             $set[] = $column . ' = ' . $value;
         }
 
-        $query .= ' SET ' . implode(', ', $set);
+        $query .= ' SET ' . \implode(', ', $set);
 
         if (!empty($this->_where)) {
             // Add selection conditions
-            $query .= ' WHERE ' . $this->_compile_conditions($this->_where);
+            $query .= ' WHERE ' . $this->compileConditions($this->_where);
         }
 
         if (!empty($this->_order_by)) {
-            $query .= ' ' . $this->_compile_order_by();
+            $query .= ' ' . $this->compileOrderBy();
         }
 
-        if ($this->_limit !== NULL) {
+        if ($this->_limit !== null) {
             $query .= ' LIMIT ' . $this->_limit;
         }
 
@@ -626,20 +576,20 @@ class QueryBuilder
     }
 
 
-    public function compile_delete(): string
+    public function compileDelete(): string
     {
-        $query = 'DELETE FROM ' . Sphinx::quote_index($this->_index);
+        $query = 'DELETE FROM ' . Sphinx::quoteIndex($this->_index);
 
         if (!empty($this->_where)) {
-            $query .= ' WHERE ' . $this->_compile_conditions($this->_where);
+            $query .= ' WHERE ' . $this->compileConditions($this->_where);
         }
 
         if (!empty($this->_order_by)) {
             // Add sorting
-            $query .= ' ' . $this->_compile_order_by();
+            $query .= ' ' . $this->compileOrderBy();
         }
 
-        if ($this->_limit !== NULL) {
+        if ($this->_limit !== null) {
             // Add limiting
             $query .= ' LIMIT ' . $this->_limit;
         }
@@ -652,7 +602,7 @@ class QueryBuilder
      *
      * @return  string
      */
-    public function compile_select(): string
+    public function compileSelect(): string
     {
 
         // Start a selection query
@@ -665,14 +615,14 @@ class QueryBuilder
 
         $columns = [];
         foreach ($this->_select as $column) {
-            $columns[] = Sphinx::quote_column($column);
+            $columns[] = Sphinx::quoteColumn($column);
         }
         $query .= \implode(', ', \array_unique($columns));
 
         if (\count($this->_from) === 1) {
-            $query .= ' FROM ' . Sphinx::quote_index($this->_from[0]);
-        } else if (!empty($this->_from)) {
-            $query .= ' FROM ' . \implode(', ', \array_map([Sphinx::class, 'quote_index'], $this->_from));
+            $query .= ' FROM ' . Sphinx::quoteIndex($this->_from[0]);
+        } elseif (!empty($this->_from)) {
+            $query .= ' FROM ' . \implode(', ', \array_map([Sphinx::class, 'quoteIndex'], $this->_from));
         }
 
         if (!empty($this->_where) || !empty($this->_match)) {
@@ -681,12 +631,13 @@ class QueryBuilder
             if (empty($this->_match)) {
                 $query .= ' WHERE ';
             } else {
-                $query .= ' WHERE MATCH(' . $this->_compile_match($this->_match) . ')';
+                $query .= ' WHERE MATCH(' . $this->compileMatch($this->_match) . ')';
 
-                if (!empty($this->_where))
+                if (!empty($this->_where)) {
                     $query .= ' AND ';
+                }
             }
-            $query .= $this->_compile_conditions($this->_where);
+            $query .= $this->compileConditions($this->_where);
         }
 
         if (!empty($this->_group_by)) {
@@ -695,7 +646,7 @@ class QueryBuilder
             $group = [];
 
             foreach ($this->_group_by as $column) {
-                $group[] = Sphinx::quote_column($column);
+                $group[] = Sphinx::quoteColumn($column);
             }
 
             $query .= ' GROUP BY ' . \implode(', ', $group);
@@ -703,15 +654,15 @@ class QueryBuilder
 
         if (!empty($this->_having)) {
             // Add filtering conditions
-            $query .= ' HAVING ' . $this->_compile_conditions($this->_having);
+            $query .= ' HAVING ' . $this->compileConditions($this->_having);
         }
 
         if (!empty($this->_order_by)) {
             // Add sorting
-            $query .= ' ' . $this->_compile_order_by();
+            $query .= ' ' . $this->compileOrderBy();
         }
 
-        if ($this->_limit !== NULL) {
+        if ($this->_limit !== null) {
             // Add limiting
 
             $query .= $this->_offset === null
@@ -720,7 +671,7 @@ class QueryBuilder
         }
 
         if ($this->_option) {
-            $query .= ' OPTION ' . implode(', ', $this->_option);
+            $query .= ' OPTION ' . \implode(', ', $this->_option);
         }
 
         if ($this->_facets) {
@@ -732,21 +683,20 @@ class QueryBuilder
         return $query;
     }
 
-    protected function _compile_match(array $values) : string
+    protected function compileMatch(array $values) : string
     {
         $set = [];
         foreach ($values as [$column, $value]) {
-
-            $column = Sphinx::escape_match($column);
+            $column = Sphinx::escapeMatch($column);
 
             if ($value === null) {
                 $set[] = $column;
             } else {
-                $set[] = $column . ' ' . Sphinx::escape_match($value);
+                $set[] = $column . ' ' . Sphinx::escapeMatch($value);
             }
         }
 
-        return Sphinx::escape(implode(' ', $set));
+        return Sphinx::escape(\implode(' ', $set));
     }
 
 
@@ -757,9 +707,9 @@ class QueryBuilder
      * @param array $conditions condition statements
      * @return  string
      */
-    protected function _compile_conditions(array $conditions): string
+    protected function compileConditions(array $conditions): string
     {
-        $last_condition = NULL;
+        $last_condition = null;
 
         $sql = '';
         foreach ($conditions as $group) {
@@ -794,7 +744,7 @@ class QueryBuilder
 
                     if ($op === 'BETWEEN' && \is_array($value)) {
                         // BETWEEN always has exactly two arguments
-                        list($min, $max) = $value;
+                        [$min, $max] = $value;
 
                         if (\is_string($min)) {
                             $min = Sphinx::quote($min);
@@ -807,11 +757,9 @@ class QueryBuilder
                         // Quote the min and max value
                         $value = $min . ' AND ' . $max;
                     } elseif ($op === 'IN' && \is_array($value)) {
-                        $value = '(' . implode(',', array_map([$this->db, 'quote'], $value)) . ')';
-
+                        $value = '(' . \implode(',', \array_map([$this->db, 'quote'], $value)) . ')';
                     } elseif ($op === 'NOT IN' && \is_array($value)) {
-                        $value = '(' . implode(',', array_map([$this->db, 'quote'], $value)) . ')';
-
+                        $value = '(' . \implode(',', \array_map([$this->db, 'quote'], $value)) . ')';
                     } else {
                         $value = \is_int($value) ? $value : Sphinx::quote($value);
                     }
@@ -819,10 +767,10 @@ class QueryBuilder
                     if ($column) {
                         if (\is_array($column)) {
                             // Use the column name
-                            $column = Sphinx::quote_identifier(\reset($column));
+                            $column = Sphinx::quoteIdentifier(\reset($column));
                         } else {
                             // Apply proper quoting to the column
-                            $column = Sphinx::quote_column($column);
+                            $column = Sphinx::quoteColumn($column);
                         }
                     }
 
@@ -843,11 +791,11 @@ class QueryBuilder
      *
      * @return  string
      */
-    protected function _compile_order_by()
+    protected function compileOrderBy()
     {
         $sort = [];
         foreach ($this->_order_by as [$column, $direction]) {
-            $sort[] = Sphinx::quote_column($column) . ' ' . $direction;
+            $sort[] = Sphinx::quoteColumn($column) . ' ' . $direction;
         }
 
         return 'ORDER BY ' . \implode(', ', $sort);
@@ -866,17 +814,17 @@ class QueryBuilder
         // Compile the SQL query
         switch ($this->_type) {
             case Sphinx::SELECT:
-                $sql = $this->compile_select();
+                $sql = $this->compileSelect();
                 break;
             case Sphinx::INSERT:
             case Sphinx::REPLACE:
-                $sql = $this->compile_insert();
+                $sql = $this->compileInsert();
                 break;
             case Sphinx::UPDATE:
-                $sql = $this->compile_update();
+                $sql = $this->compileUpdate();
                 break;
             case Sphinx::DELETE:
-                $sql = $this->compile_delete();
+                $sql = $this->compileDelete();
                 break;
         }
 
@@ -899,17 +847,17 @@ class QueryBuilder
         switch ($this->_type) {
             case Sphinx::SELECT:
             case Sphinx::MULTI_SELECT:
-                $sql = $this->compile_select();
+                $sql = $this->compileSelect();
                 break;
             case Sphinx::INSERT:
             case Sphinx::REPLACE:
-                $sql = $this->compile_insert();
+                $sql = $this->compileInsert();
                 break;
             case Sphinx::UPDATE:
-                $sql = $this->compile_update();
+                $sql = $this->compileUpdate();
                 break;
             case Sphinx::DELETE:
-                $sql = $this->compile_delete();
+                $sql = $this->compileDelete();
                 break;
         }
 
@@ -925,7 +873,7 @@ class QueryBuilder
      * @param array $insert_data "column name" => "value" assoc list
      * @return  $this
      */
-    public function insert($index = NULL, array $insert_data = NULL) : self
+    public function insert($index = null, array $insert_data = null) : self
     {
         $this->_type = Sphinx::INSERT;
 
@@ -950,7 +898,7 @@ class QueryBuilder
      * @param array|null $insert_data
      * @return $this
      */
-    public function replace($index = NULL, array $insert_data = NULL) : self
+    public function replace($index = null, array $insert_data = null) : self
     {
         $this->insert($index, $insert_data);
         $this->_type = Sphinx::REPLACE;
@@ -962,11 +910,11 @@ class QueryBuilder
      * @param string $index idnex name
      * @return  QueryBuilder
      */
-    public function update($index = NULL) : self
+    public function update($index = null) : self
     {
         $this->_type = Sphinx::UPDATE;
 
-        if ($index !== NULL) {
+        if ($index !== null) {
             $this->index($index);
         }
 
@@ -974,11 +922,11 @@ class QueryBuilder
     }
 
 
-    public function delete($index = NULL) : self
+    public function delete($index = null) : self
     {
         $this->_type = Sphinx::DELETE;
 
-        if ($index !== NULL) {
+        if ($index !== null) {
             $this->index($index);
         }
 
@@ -997,6 +945,4 @@ class QueryBuilder
     {
         return $this->execute();
     }
-
-
 }

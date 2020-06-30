@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace mii\search\sphinx;
 
@@ -8,7 +8,8 @@ namespace mii\search\sphinx;
  *
  */
 
-class Expression {
+class Expression
+{
 
     // Unquoted parameters
     protected $_parameters;
@@ -39,9 +40,9 @@ class Expression {
      * @param   mixed   $var    variable to use
      * @return  $this
      */
-    public function bind($param, & $var)
+    public function bind($param, &$var)
     {
-        $this->_parameters[$param] =& $var;
+        $this->_parameters[$param] =&$var;
 
         return $this;
     }
@@ -108,16 +109,14 @@ class Expression {
     {
         $value = $this->value();
 
-        if ( ! empty($this->_parameters))
-        {
+        if (!empty($this->_parameters)) {
             // Quote all of the parameter values
-            $params = array_map([Sphinx::class, 'quote'], $this->_parameters);
+            $params = \array_map([Sphinx::class, 'quote'], $this->_parameters);
 
             // Replace the values in the expression
-            $value = strtr($value, $params);
+            $value = \strtr($value, $params);
         }
 
         return $value;
     }
-
 }

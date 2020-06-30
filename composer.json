@@ -9,9 +9,11 @@
   ],
   "homepage": "https://github.com/levmorozov/sphinxql",
   "license": "MIT",
+  "minimum-stability": "dev",
+  "prefer-stable": true,
   "require": {
     "php": ">=7.4",
-    "levmorozov/mii" : ">=1.9.24",
+    "levmorozov/mii" : "^1.10.0",
     "ext-mbstring": "*",
     "ext-mysqli": "*"
   },

@@ -1,7 +1,6 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace mii\search\sphinx;
-
 
 class SphinxQL
 {
@@ -9,7 +8,7 @@ class SphinxQL
      * @param string $q
      * @return array
      */
-    static function select($q, array $params = [])
+    public static function select($q, array $params = [])
     {
         return static::query(Sphinx::SELECT, $q, $params);
     }
@@ -19,7 +18,7 @@ class SphinxQL
      * @param string $q
      * @param array  $params
      */
-    static function query($type, $q, array $params = [], $db = null)
+    public static function query($type, $q, array $params = [], $db = null)
     {
         if ($db === null) {
             $db = \Mii::$app->sphinx;
@@ -27,10 +26,10 @@ class SphinxQL
 
         if (!empty($params)) {
             // Quote all of the values
-            $values = array_map([Sphinx::class, 'quote'], $params);
+            $values = \array_map([Sphinx::class, 'quote'], $params);
 
             // Replace the values in the SQL
-            $q = strtr($q, $values);
+            $q = \strtr($q, $values);
         }
 
         return $db->query($type, $q);
@@ -40,7 +39,7 @@ class SphinxQL
      * @param string $q
      * @return array
      */
-    static function update($q, array $params = [])
+    public static function update($q, array $params = [])
     {
         return static::query(Sphinx::UPDATE, $q, $params);
     }
@@ -49,7 +48,7 @@ class SphinxQL
      * @param string $q
      * @return int
      */
-    static function insert($q, array $params = [])
+    public static function insert($q, array $params = [])
     {
         return static::query(Sphinx::INSERT, $q, $params);
     }
@@ -58,7 +57,7 @@ class SphinxQL
      * @param string $q
      * @return int
      */
-    static function delete($q, array $params = [])
+    public static function delete($q, array $params = [])
     {
         return static::query(Sphinx::DELETE, $q, $params);
     }
@@ -68,15 +67,14 @@ class SphinxQL
      * @param array  $params
      * @return Expression
      */
-    static function expr($value, array $params = [])
+    public static function expr($value, array $params = [])
     {
         return new Expression($value, $params);
     }
 
 
-    static function meta($like = null)
+    public static function meta($like = null)
     {
-
         $sql = 'SHOW META';
 
         if ($like !== null) {
@@ -91,5 +89,4 @@ class SphinxQL
         }
         return $result;
     }
-
 }
