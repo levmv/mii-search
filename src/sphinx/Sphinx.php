@@ -442,6 +442,21 @@ class Sphinx extends Component
             $opts = \implode(',', $opts);
         }
 
-        return $this->query(self::SELECT, 'CALL KEYWORDS(' . self::escape($text) . ", '$index', $opts");
+        return $this->query(self::SELECT, 'CALL KEYWORDS(' . self::escape($text) . ", '$index', $opts)");
+    }
+
+    public function callQsuggest(string $word, string $index, array $options = null) : array
+    {
+        if (!$options) {
+            $opts = '4 as limit,4 as max_edits,3 as delta_len,20 as max_matches,4 as reject,0 as result_line';
+        } else {
+            $opts = [];
+            foreach ($options as $opt_name) {
+                $opts[] = "1 as $opt_name";
+            }
+            $opts = implode(',', $opts);
+        }
+
+        return $this->query(self::SELECT, "CALL QSUGGEST(" . self::escape($word) . ", '$index', $opts)");
     }
 }

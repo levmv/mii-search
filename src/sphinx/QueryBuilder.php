@@ -96,10 +96,10 @@ class QueryBuilder
     /**
      * Sets the initial columns to select
      *
-     * @param array $columns column list
+     * @param array $columns
      * @return QueryBuilder
      */
-    public function select(array $columns = null): QueryBuilder
+    public function select(...$columns): QueryBuilder
     {
         $this->_type = Sphinx::SELECT;
 
@@ -250,9 +250,13 @@ class QueryBuilder
      * @param mixed  $value column value
      * @return  $this
      */
-    public function filter($column, $op, $value)
+    public function filter($column, $op, $value) : self
     {
-        return $this->andFilter($column, $op, $value);
+        if ($value === null || $value === '' || !Rules::notEmpty((\is_string($value) ? \trim($value) : $value))) {
+            return $this;
+        }
+
+        return $this->andWhere($column, $op, $value);
     }
 
     /**
@@ -263,7 +267,7 @@ class QueryBuilder
      * @param mixed  $value column value
      * @return  $this
      */
-    public function andWhere($column, $op = null, $value = null)
+    public function andWhere($column, $op = null, $value = null): self
     {
         if ($column === null) {
             $this->_where[] = ['AND' => '('];
@@ -277,24 +281,6 @@ class QueryBuilder
         }
 
         return $this;
-    }
-
-
-    /**
-     * Creates a new "AND WHERE" condition for the query. But only for not empty values.
-     *
-     * @param mixed  $column column name or array($column, $alias) or object
-     * @param string $op logic operator
-     * @param mixed  $value column value
-     * @return  $this
-     */
-    public function andFilter($column, $op, $value)
-    {
-        if ($value === null || $value === '' || !Rules::not_empty((\is_string($value) ? \trim($value) : $value))) {
-            return $this;
-        }
-
-        return $this->andWhere($column, $op, $value);
     }
 
 
@@ -474,7 +460,7 @@ class QueryBuilder
      * @param Query $query Database_Query of SELECT type
      * @return  $this
      */
-    public function subselect(Query $query) : self
+    public function subselect(QueryBuilder $query) : self
     {
         $this->_values = $query;
 

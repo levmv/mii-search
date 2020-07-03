@@ -3,6 +3,7 @@
 namespace mii\search;
 
 use mii\search\sphinx\Sphinx;
+use mii\util\UTF8;
 
 class SearchQuery
 {
@@ -26,6 +27,7 @@ class SearchQuery
     protected function clean(string $q): string
     {
         $q = \mb_strtolower($q);
+        $q = UTF8::strip4b($q);
         try {
             $q = \preg_replace('/[^\w\s]+/mu', '', $q);
             $q = \preg_replace('/\s+/u', ' ', $q);
@@ -43,6 +45,30 @@ class SearchQuery
     public function text() : string
     {
         return $this->raw_q;
+    }
+
+    public function keywords(string $index)
+    {
+        $words = $this->sphinx->callKeywords($this->raw_q, $index);
+
+        $this->words = array_map(function($r) {
+            $word = new QueryWord;
+            $word->pos = (int) $r['qpos'];
+            $word->text = $r['tokenized'];
+            $word->normalized = $r['normalized'];
+            $word->hits = (int) $r['hits'];
+            $word->isLatin = (bool) $r['is_latin'];
+            $word->isNoun = (bool) $r["is_noun"];
+            $word->isNumber = (bool) $r["is_number"];
+            $word->hasDigit = (bool) $r["has_digit"];
+            return $word;
+        }, $words);
+
+        foreach($this->words as $word) {
+            if($word->hits === 0) {
+                dd($this->sphinx->callQsuggest($word->text, $index));
+            }
+        }
     }
 
 
