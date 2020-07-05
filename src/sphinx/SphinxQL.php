@@ -18,7 +18,7 @@ class SphinxQL
      * @param string $q
      * @param array  $params
      */
-    public static function query($type, $q, array $params = [], $db = null)
+    public static function query($type, $q, array $params = [], Sphinx $db = null)
     {
         if ($db === null) {
             $db = \Mii::$app->sphinx;

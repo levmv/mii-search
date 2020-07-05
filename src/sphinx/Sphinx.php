@@ -114,7 +114,7 @@ class Sphinx extends Component
      * @return array|null
      * @throws SphinxqlException
      */
-    public function multi_query(string $sql): ?array
+    public function multiQuery(string $sql): ?array
     {
         $this->conn or $this->connect();
         \assert((config('debug') && ($benchmark = \mii\util\Profiler::start('Database', $sql))) || 1);
@@ -151,12 +151,12 @@ class Sphinx extends Component
     }
 
 
-    public function flush_rtindex(string $index) : int
+    public function flushRtIndex(string $index) : int
     {
         return $this->query(self::RAW, "FLUSH RTINDEX $index");
     }
 
-    public function truncate_rtindex(string $index) : int
+    public function truncateRtIndex(string $index) : int
     {
         return $this->query(self::RAW, "TRUNCATE RTINDEX $index");
     }
