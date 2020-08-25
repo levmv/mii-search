@@ -673,11 +673,18 @@ class QueryBuilder
     {
         $set = [];
         foreach ($values as [$column, $value]) {
-            $column = Sphinx::escapeMatch($column);
 
             if ($value === null) {
-                $set[] = $column;
+                $set[] = Sphinx::escapeMatch($column);
             } else {
+                if(\is_array($column)) {
+                    $column = implode(',', array_map('mii\search\sphinx\Sphinx::escapeMatch', $column));
+                } else {
+                    $column = Sphinx::escapeMatch($column);
+                }
+
+                $column = "@($column)";
+
                 $set[] = $column . ' ' . Sphinx::escapeMatch($value);
             }
         }

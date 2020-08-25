@@ -2,6 +2,7 @@
 
 namespace mii\search;
 
+use mii\search\sphinx\Expression;
 use mii\search\sphinx\Sphinx;
 use mii\util\UTF8;
 
@@ -19,7 +20,8 @@ class SearchQuery
         $this->sphinx = $sphinx ?? \Mii::$app->get('sphinx');
 
         $this->raw_q = $this->clean($q);
-        $this->words = \explode(' ', $q);
+
+        $this->words = \explode(' ', $this->raw_q);
         $this->word_count = \count($this->words);
     }
 
@@ -29,7 +31,7 @@ class SearchQuery
         $q = \mb_strtolower($q);
         $q = UTF8::strip4b($q);
         try {
-            $q = \preg_replace('/[^\w\s]+/mu', '', $q);
+            $q = \preg_replace('/[^\w\s@\.]+/mu', '', $q);
             $q = \preg_replace('/\s+/u', ' ', $q);
         } catch (\Throwable $t) {
             \Mii::error($t);
@@ -51,7 +53,7 @@ class SearchQuery
     {
         $words = $this->sphinx->callKeywords($this->raw_q, $index);
 
-        $this->words = array_map(function($r) {
+        $this->words = array_map(static function($r) {
             $word = new QueryWord;
             $word->pos = (int) $r['qpos'];
             $word->text = $r['tokenized'];
@@ -80,7 +82,7 @@ class SearchQuery
             if (isset($meta['keyword[' . $i . ']']) and $meta['docs[' . $i . ']'] == 0) {
                 if ($expanded) {
                     $first = \mb_substr($meta['keyword[' . $i . ']'], 0, 1);
-                    if ($first == '=' or $first == '*') {
+                    if ($first === '=' || $first === '*') {
                         continue;
                     }
                 } else {
@@ -93,5 +95,37 @@ class SearchQuery
             }
         }
         return $result;
+    }
+
+
+    public function quorum($threshold)
+    {
+        if ($this->wordCount() < 2) {
+            return $this->raw_q;
+        }
+
+        $query = Sphinx::escapeMatch($this->raw_q);
+
+        if (is_int($threshold)) {
+            if ($threshold < 0) {
+                $threshold = $this->wordCount() - $threshold;
+            }
+        } else {
+            $threshold = number_format($threshold, 1);
+        }
+        return new Expression('"' . $query . '"/' . $threshold);
+    }
+
+    /**
+     * Returns layout changed string
+     *
+     * @param $string
+     * @return string
+     */
+    private function changeLayout(string $string): string
+    {
+        $from = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '"', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.'];
+        $to = ['й', 'ц', 'у', 'к', 'е', 'н', 'г', 'ш', 'щ', 'з', 'х', 'ъ', 'ф', 'ы', 'в', 'а', 'п', 'р', 'о', 'л', 'д', 'ж', 'э', 'я', 'ч', 'с', 'м', 'и', 'т', 'ь', 'б', 'ю'];
+        return \str_replace($from, $to, $string);
     }
 }

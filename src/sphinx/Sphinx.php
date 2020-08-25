@@ -3,6 +3,7 @@
 namespace mii\search\sphinx;
 
 use mii\core\Component;
+use mii\search\SearchQuery;
 
 class Sphinx extends Component
 {
@@ -313,6 +314,10 @@ class Sphinx extends Component
     {
         if ($string instanceof Expression) {
             return $string->value();
+        }
+
+        if($string instanceof SearchQuery) {
+            $string = $string->text();
         }
 
         return \str_replace(self::$escape_from, self::$escape_to, (string) $string);
