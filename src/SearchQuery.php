@@ -21,7 +21,7 @@ class SearchQuery
 
         $this->raw_q = $this->clean($q);
 
-        $this->words = \explode(' ', $this->raw_q);
+        $this->words = \array_filter(\explode(' ', $this->raw_q));
         $this->word_count = \count($this->words);
     }
 
