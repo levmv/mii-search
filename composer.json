@@ -1,5 +1,5 @@
 {
-  "name": "levmorozov/mii-search",
+  "name": "levmv/mii-search",
   "type": "library",
   "description": "Mii SphinxQL component",
   "keywords": [
@@ -7,13 +7,13 @@
     "sphinxql",
     "sphinxsearch"
   ],
-  "homepage": "https://github.com/levmorozov/sphinxql",
+  "homepage": "https://github.com/levmv/sphinxql",
   "license": "MIT",
   "minimum-stability": "dev",
   "prefer-stable": true,
   "require": {
     "php": ">=7.4",
-    "levmorozov/mii" : "^1.10.0",
+    "levmv/mii" : "^1.10.0",
     "ext-mbstring": "*",
     "ext-mysqli": "*"
   },
